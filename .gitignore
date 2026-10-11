@@ -1,0 +1,6 @@
+# Arquivos auxiliares do build .tex
+*.aux
+*.fls
+*.log
+*.synctex.gz
+*.fdb_latexmk
