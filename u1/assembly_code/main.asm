@@ -1,5 +1,24 @@
 .ORG 0x00
+; Entrada (R19:18)
+.DEF INPUT_HIGH = R19
+.DEF INPUT_LOW = R18
     
+; Resposta (R21:R20)
+.DEF RESP_HIGH = R21
+.DEF RESP_LOW = R20
+    
+;Valor sendo trabalhado (R22:R23)
+.DEF A_HIGH = R23
+.DEF A_LOW = R22
+ 
+; Registrador do sinal (R25:R24)
+.DEF SINAL_HIGH = R25
+.DEF SINAL_LOW = R24
+
+; Registrador da resposta temporária (R27:R26)
+.DEF RESP_TEMP_HIGH = R27
+.DEF RESP_TEMP_LOW = R26
+   
 ; Incializa o SP
 LDI R16, HIGH(RAMEND)
 OUT SPH, R16
@@ -7,56 +26,60 @@ LDI R16, LOW(RAMEND)
 OUT SPL, R16
 JMP MAIN
     
-; Carregando o registrador T
+; Carregando o registrador de sinal (T)
 CALCULA_T: 
-MOV R21, R17
-LSL R21
-LSL R21
-LDI R29, 0x01
-ADD R21, R29
-MOV R22, R18
-SUB R22, R21
-MOV R19, R22
-BRMI NEGATIVO
-LSL R17
-MOV R18, R19
-SBR R17, 0x01
-RET
+MOVW RESP_TEMP_HIGH:RESP_TEMP_LOW, RESP_HIGH:RESP_LOW
+LDI R28, 0x02 ; contador para o shift duplo para montar {RESP,01}
+SHIFT_SINAL:
+LSL RESP_TEMP_LOW
+ROL RESP_TEMP_HIGH
+DEC R28
+BRNE SHIFT_SINAL
+SBR RESP_TEMP_LOW, 0x01
+MOVW SINAL_HIGH:SINAL_LOW, A_HIGH:A_LOW
+SUB SINAL_LOW, RESP_TEMP_LOW
+SBC SINAL_HIGH, RESP_TEMP_HIGH
     
+BRMI NEGATIVO
+
+LSL RESP_LOW
+ROL RESP_HIGH
+MOVW A_HIGH:A_LOW, SINAL_HIGH:SINAL_LOW
+SBR RESP_LOW, 0x01
+RET    
     
 NEGATIVO:
-LSL R17
+LSL RESP_LOW
+ROL RESP_HIGH
 RET
-
     
-; Carregando o registrador A
+; Carregando o registrador com o valor que será usado (A)
 SHIFT_DOIS:
-LDI R20, 0x02 ; contador para o shift duplo
+LDI R29, 0x02 ; contador para o shift duplo
 SHIFT:
-LSL R16
-CALL CARRY
-DEC R20
+LSL INPUT_LOW
+ROL INPUT_HIGH
+ROL A_LOW
+ROL A_HIGH
+DEC R29
 BRNE SHIFT
 RET 
 
-CARRY:
-BRCS CS
-LSL R18
-CBR R18, 0x01
-CLC
-RET 
-CS: 
-LSL R18
-SBR R18, 0x01
-CLC	
-RET 
+ 
+MAIN: ; Supõe-se entrada em Q16.0 e saída em Q8.8
+LDI INPUT_HIGH, 0xFF ; carrega o registrador com o valor HIGH para calcular a raiz (X)
+LDI INPUT_LOW, 0xFF ; carrega o registrador com o valor LOW para calcular a raiz (X)
 
-MAIN: ; Supõe-se que os números já estão todos em Q4.4
-LDI R16, 0x01 ; carrega o registrador com o valor para calcular a raiz (X)
-LDI R17, 0x00 ; carrega o registrador da resposta (Q)
-LDI R18, 0x00 ; carrega o registrador com o valor atual sendo trabalhado (A)
-LDI R19, 0x00 ; carrega o registrador de sinal (T)
-LDI R30, 0x06 ; carrega o registrador de contagem da quantidade de cálculos
+LDI RESP_HIGH, 0x00 ; carrega o registrador HIGH da resposta (Q)
+LDI RESP_LOW, 0x00 ; carrega o registrador LOW da resposta (Q)
+    
+LDI A_HIGH, 0x00 ; carrega o registrador com o valor HIGH atual sendo trabalhado (A)
+LDI A_LOW, 0x00 ; carrega o registrador com o valor LOW atual sendo trabalhado (A)
+
+LDI SINAL_HIGH, 0x00 ; carrega o registrador HIGH de sinal (T)
+LDI SINAL_LOW, 0x00 ; carrega o registrador LOW de sinal (T)
+
+LDI R30, 0x10 ; carrega o contador da quantidade de cálculos
     
 LOOP:
 CALL SHIFT_DOIS
@@ -64,7 +87,6 @@ CALL CALCULA_T
 DEC R30
 BRNE LOOP
     
-
 FINAL: RJMP FINAL
 
 
