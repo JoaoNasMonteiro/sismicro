@@ -6,12 +6,13 @@ Escolhemos o algoritmo dígito por dígito para realizar os cálculos das raíze
 
 $S = (10X + Y)^{2} = 100X^{2} + 20XY + Y^{2}$
 
-Inicialmente, dividimos os dígitos da direita para a esquerda em grupos de 2. Então calculamos um valor para X tal que $X^{2}$ seja menor ou igual que o primeiro grupo. Em seguida, subtraímos esse quadrado do grupo, isto é, subtraímos $100X^{2}$, restando apenas $S' = 20XY + Y^{2}$. Para o próximo digito da resposta, queremos um valor Y tal que 2X concatenado com Y e em seguida multiplicado por Y resulte em um valor menor ou igual ao bloco restante. No nosso exemplo, isso é o mesmo que calcular:
-$$
-(10(2X)+Y)Y = 20XY + Y^{2} = S'
-$$
+Inicialmente, dividimos os dígitos da direita para a esquerda em grupos de 2. Então calculamos um valor para X tal que $X^{2}$ seja menor ou igual que o primeiro grupo. Em seguida, subtraímos esse quadrado do grupo, isto é, subtraímos $100X^{2}$, restando apenas $S' = 20XY + Y^{2}$. Para o próximo dígito da resposta, queremos um valor Y tal que 2X concatenado com Y e em seguida multiplicado por Y resulte em um valor menor ou igual ao bloco restante. No nosso exemplo, isso é o mesmo que calcular:
 
-E tomamos a diferença novamente. Caso houvessem, continuaríamos o processos com os grupos de digitos restantes. Como o exemplo foi um quadrado perfeito, a resposta já seria o próprio número XY. O algoritmo segue até um determinado critério de parada caso não haja raízes exatas. 
+```math
+(10(2X)+Y)Y = 20XY + Y^{2} = S'
+```
+
+E tomamos a diferença novamente. Caso houvesse, continuaríamos o processos com os grupos de dígitos restantes. Como o exemplo foi um quadrado perfeito, a resposta já seria o próprio número XY. O algoritmo segue até um determinado critério de parada caso não haja raízes exatas. 
 
 Finalmente, quando não houver mais grupos de dígitos disponíveis, coloca-se um grupo 00 e continua o cálculo nas casas decimais da resposta. As demonstrações completas são dadas em [^1]
 
