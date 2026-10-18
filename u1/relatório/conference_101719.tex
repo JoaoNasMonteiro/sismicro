@@ -5,284 +5,147 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage{inputenc}
+\usepackage[brazil]{babel}
 \usepackage{textcomp}
+\usepackage{listings}
 \usepackage{xcolor}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-\begin{document}
 
-\title{Conference Paper Title*\\
-{\footnotesize \textsuperscript{*}Note: Sub-titles are not captured in Xplore and
-should not be used}
-\thanks{Identify applicable funding agency here. If none, delete this.}
+% Configuração para exibir o código fonte de forma elegante
+\lstset{
+    backgroundcolor=\color{white},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    breaklines=true
 }
 
-\author{\IEEEauthorblockN{1\textsuperscript{st} Given Name Surname}
-\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-\textit{name of organization (of Aff.)}\\
-City, Country \\
-email address or ORCID}
-\and
-\IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
-\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-\textit{name of organization (of Aff.)}\\
-City, Country \\
-email address or ORCID}
-\and
-\IEEEauthorblockN{3\textsuperscript{rd} Given Name Surname}
-\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-\textit{name of organization (of Aff.)}\\
-City, Country \\
-email address or ORCID}
-\and
-\IEEEauthorblockN{4\textsuperscript{th} Given Name Surname}
-\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-\textit{name of organization (of Aff.)}\\
-City, Country \\
-email address or ORCID}
-\and
-\IEEEauthorblockN{5\textsuperscript{th} Given Name Surname}
-\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-\textit{name of organization (of Aff.)}\\
-City, Country \\
-email address or ORCID}
-\and
-\IEEEauthorblockN{6\textsuperscript{th} Given Name Surname}
-\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-\textit{name of organization (of Aff.)}\\
-City, Country \\
-email address or ORCID}
+    \begin{document}
+
+\title{Algoritmo Dígito por Dígito para Cálculo de Raiz Quadrada no ATmega328}
+\author{
+\IEEEauthorblockN{Gabriel Luduvice Nunes Wolfovitch, João Pedro Nascimento Monteiro,\\
+João Vítor de Araújo Costa de Oliveira e Lucas Miranda Campos}
+\IEEEauthorblockA{\textit{Departamento de Engenharia Elétrica e Computação (DEEC)}\\
+\textit{Universidade Federal da Bahia (UFBA)}\\
+Salvador, Brasil\\
+\{email1, email2, email3, email4\}@ufba.br
+}
 }
 
 \maketitle
 
 \begin{abstract}
-This document is a model and instructions for \LaTeX.
-This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
-or Math in Paper Title or Abstract.
+O cálculo de raízes quadradas em sistemas digitais e FPGAs frequentemente esbarra no alto custo computacional e no consumo excessivo de portas lógicas quando implementado através de algoritmos tradicionais que exigem blocos de divisão e multiplicação. Este artigo apresenta o desenvolvimento, a justificativa e a validação de um algoritmo de extração de raiz quadrada binária baseado no método de deslocamento e subtração (shift-and-subtract). A metodologia adotou um fluxo de projeto estruturado: iniciou-se com a modelagem matemática em linguagem C para comprovação da estabilidade do algoritmo, seguida por uma transcrição em nível de arquitetura utilizando a linguagem Assembly. O protótipo em Assembly atuou como uma prova de conceito fundamental, mapeando o comportamento exato dos registradores e das flags de controle. Os resultados comprovam que a eliminação de operadores aritméticos complexos torna a transição para a linguagem de descrição de hardware (Verilog) direta, previsível e altamente otimizada.
 \end{abstract}
 
 \begin{IEEEkeywords}
-component, formatting, style, styling, insert
+Raiz Quadrada, Assembly, Linguagem C, FPGA, Verilog, Otimização de Hardware, Sistemas Digitais.
 \end{IEEEkeywords}
 
-\section{Introduction}
-This document is a model and instructions for \LaTeX.
-Please observe the conference page limits. 
+\section{Introdução}
+O desenvolvimento de sistemas embarcados e o processamento de sinais em FPGAs (\textit{Field-Programmable Gate Arrays}) exigem algoritmos aritméticos altamente otimizados. Em linguagens de alto nível, calcular uma raiz quadrada é uma tarefa trivial, resolvida por chamadas de bibliotecas padrão (como a \texttt{math.h} em C). Contudo, ao transpor essa operação para o nível de hardware, o uso de divisores e multiplicadores dedicados consome fatias significativas de DSP (\textit{Digital Signal Processing}) e aumenta o atraso combinacional do circuito.
 
-\section{Ease of Use}
+Para mitigar esse problema, este trabalho propõe a implementação de um algoritmo "bit a bit" focado estritamente em operações elementares. O objetivo principal é demonstrar que a tradução de um modelo funcional em linguagem C para um protótipo operacional em Assembly garante a confiabilidade do caminho de dados (\textit{datapath}), preparando o sistema para uma futura síntese em hardware livre de gargalos lógicos.
 
-\subsection{Maintaining the Integrity of the Specifications}
+\section{Justificativa do Método Bit a Bit}
+A escolha do algoritmo de extração de raiz quadrada binária dígito a dígito (também conhecido como \textit{shift-and-subtract}) fundamenta-se na economia de recursos de hardware. Este método assemelha-se ao algoritmo manual de extração de raízes, adaptado para a base 2.
 
-The IEEEtran class file is used to format your paper and style the text. All margins, 
-column widths, line spaces, and text fonts are prescribed; please do not 
-alter them. You may note peculiarities. For example, the head margin
-measures proportionately more than is customary. This measurement 
-and others are deliberate, using specifications that anticipate your paper 
-as one part of the entire proceedings, and not as an independent document. 
-Please do not revise any of the current designations.
-
-\section{Prepare Your Paper Before Styling}
-Before you begin to format your paper, first write and save the content as a 
-separate text file. Complete all content and organizational editing before 
-formatting. Please note sections \ref{AA}--\ref{SCM} below for more information on 
-proofreading, spelling and grammar.
-
-Keep your text and graphic files separate until after the text has been 
-formatted and styled. Do not number text heads---{\LaTeX} will do that 
-for you.
-
-\subsection{Abbreviations and Acronyms}\label{AA}
-Define abbreviations and acronyms the first time they are used in the text, 
-even after they have been defined in the abstract. Abbreviations such as 
-IEEE, SI, MKS, CGS, ac, dc, and rms do not have to be defined. Do not use 
-abbreviations in the title or heads unless they are unavoidable.
-
-\subsection{Units}
+A grande vantagem arquitetural dessa escolha é que ela abole completamente o uso de divisões e multiplicações. Toda a lógica matemática é resolvida através de:
 \begin{itemize}
-\item Use either SI (MKS) or CGS as primary units. (SI units are encouraged.) English units may be used as secondary units (in parentheses). An exception would be the use of English units as identifiers in trade, such as ``3.5-inch disk drive''.
-\item Avoid combining SI and CGS units, such as current in amperes and magnetic field in oersteds. This often leads to confusion because equations do not balance dimensionally. If you must use mixed units, clearly state the units for each quantity that you use in an equation.
-\item Do not mix complete spellings and abbreviations of units: ``Wb/m\textsuperscript{2}'' or ``webers per square meter'', not ``webers/m\textsuperscript{2}''. Spell out units when they appear in text: ``. . . a few henries'', not ``. . . a few H''.
-\item Use a zero before decimal points: ``0.25'', not ``.25''. Use ``cm\textsuperscript{3}'', not ``cc''.)
+    \item \textbf{Deslocamentos lógicos (\textit{Shifts}):} Operações que, em hardware, custam zero ciclos de clock adicionais, consistindo apenas em roteamento de fios no Verilog.
+    \item \textbf{Subtrações simples:} Implementadas facilmente através de somadores em complemento de 2.
+    \item \textbf{Testes de condição:} Avaliação direta do bit de sinal para tomadas de decisão.
 \end{itemize}
 
-\subsection{Equations}
-Number equations consecutively. To make your 
-equations more compact, you may use the solidus (~/~), the exp function, or 
-appropriate exponents. Italicize Roman symbols for quantities and variables, 
-but not Greek symbols. Use a long dash rather than a hyphen for a minus 
-sign. Punctuate equations with commas or periods when they are part of a 
-sentence, as in:
-\begin{equation}
-a+b=\gamma\label{eq}
-\end{equation}
+Dessa forma, o custo computacional passa a ser linear em relação ao número de bits do radicando, tornando o tempo de execução previsível e compatível com máquinas de estado finito (FSM).
 
-Be sure that the 
-symbols in your equation have been defined before or immediately following 
-the equation. Use ``\eqref{eq}'', not ``Eq.~\eqref{eq}'' or ``equation \eqref{eq}'', except at 
-the beginning of a sentence: ``Equation \eqref{eq} is . . .''
+\section{Modelagem em Alto Nível: Linguagem C}
+A primeira etapa do projeto consistiu em validar a matemática do método \textit{shift-and-subtract} isoladamente da arquitetura. Para isso, o algoritmo foi implementado na linguagem C. A Listagem \ref{lst:codigoC} demonstra a lógica principal (adaptada para um radicando de 8 bits).
 
-\subsection{\LaTeX-Specific Advice}
+\begin{lstlisting}[language=C, caption={Implementação funcional em C do algoritmo bit a bit.}, label={lst:codigoC}]
+#include <stdio.h>
+#include <stdint.h>
 
-Please use ``soft'' (e.g., \verb|\eqref{Eq}|) cross references instead
-of ``hard'' references (e.g., \verb|(1)|). That will make it possible
-to combine sections, add equations, or change the order of figures or
-citations without having to go through the file line by line.
+uint8_t isqrt_8bit(uint8_t X) {
+    uint8_t Q = 0; // Raiz
+    uint8_t A = 0; // Acumulador/Resto parcial
+    int16_t T = 0; // Teste de sinal
+    
+    // Loop de 4 interacoes para radicando de 8 bits
+    for(int i = 3; i >= 0; i--) {
+        // Desloca A e insere os 2 bits mais significativos de X
+        A = (A << 2) | ((X >> (i * 2)) & 0x03);
+        
+        // Define T = A - (Q concatenado com 01)
+        T = A - ((Q << 2) | 1);
+        
+        Q = (Q << 1); // Desloca Q previamente
+        
+        // Testa se a subtracao foi positiva ou zero
+        if(T >= 0) {
+            A = T;    // Atualiza o acumulador
+            Q = Q | 1; // Seta o bit menos significativo de Q
+        }
+    }
+    return Q;
+}
+\end{lstlisting}
 
-Please don't use the \verb|{eqnarray}| equation environment. Use
-\verb|{align}| or \verb|{IEEEeqnarray}| instead. The \verb|{eqnarray}|
-environment leaves unsightly spaces around relation symbols.
+A execução deste código em C comprovou a eficácia do método. A lógica iterativa calcula pares de bits sequencialmente, reduzindo progressivamente o radicando original ($X$) enquanto constrói o resultado ($Q$). No entanto, variáveis em C não refletem os limites de registradores físicos e \textit{flags} de status de uma ALU (\textit{Arithmetic Logic Unit}), tornando a etapa seguinte mandatória.
 
-Please note that the \verb|{subequations}| environment in {\LaTeX}
-will increment the main equation counter even when there are no
-equation numbers displayed. If you forget that, you might write an
-article in which the equation numbers skip from (17) to (20), causing
-the copy editors to wonder if you've discovered a new method of
-counting.
+\section{Prova de Conceito em Baixo Nível: O Protótipo em Assembly}
+Com a matemática validada, o algoritmo foi transcrito para a linguagem Assembly no arquivo \texttt{main.asm}. Esta etapa serviu como um protótipo em escala reduzida e foi crucial para o projeto, atuando como o verdadeiro elo de ligação entre o software e o hardware.
 
-{\BibTeX} does not work by magic. It doesn't get the bibliographic
-data from thin air but from .bib files. If you use {\BibTeX} to produce a
-bibliography you must send the .bib files. 
+No \texttt{main.asm}, as abstrações da linguagem C foram substituídas pelo rigor dos componentes de hardware. Definiram-se quatro registradores fundamentais:
+1) \textbf{X:} O radicando de entrada.
+2) \textbf{A:} Registrador acumulador que guarda o valor parcial em trabalho.
+3) \textbf{T:} Registrador utilizado para armazenar o resultado do teste de subtração.
+4) \textbf{Q:} Registrador responsável por armazenar a raiz quadrada final.
 
-{\LaTeX} can't read your mind. If you assign the same label to a
-subsubsection and a table, you might find that Table I has been cross
-referenced as Table IV-B3. 
+No Assembly, a operação de deslocamento bit a bit (\texttt{A = (A << 2) ...}) foi traduzida para instruções nativas de \textit{Logical Shift Left} (LSL). O grande diferencial do teste em Assembly ocorreu na avaliação da condição \texttt{if(T >= 0)}. Em vez de uma avaliação lógica de alto nível, a verificação passou a depender do comportamento natural da Unidade Lógica e Aritmética. Ao realizar a instrução de subtração para calcular $T$, a CPU atualizava suas \textit{Flags} de status. Bastou utilizar uma instrução de desvio condicional (\textit{Branch}) baseada no bit de sinal (ou \textit{Carry}) para determinar se o bit correspondente de $Q$ seria 1 ou 0.
 
-{\LaTeX} does not have precognitive abilities. If you put a
-\verb|\label| command before the command that updates the counter it's
-supposed to be using, the label will pick up the last counter to be
-cross referenced instead. In particular, a \verb|\label| command
-should not go before the caption of a figure or a table.
+\section{Resultados da Validação}
+Para validar o protótipo em Assembly, realizou-se um teste de rastreamento (teste de mesa) com a entrada decimal 121 (em binário: 01111001). Como esperado para um número de 8 bits, o algoritmo resolveu o cálculo em exatamente quatro passos.
 
-Do not use \verb|\nonumber| inside the \verb|{array}| environment. It
-will not stop equation numbers inside \verb|{array}| (there won't be
-any anyway) and it might stop a wanted equation number in the
-surrounding equation.
-
-\subsection{Some Common Mistakes}\label{SCM}
-\begin{itemize}
-\item The word ``data'' is plural, not singular.
-\item The subscript for the permeability of vacuum $\mu_{0}$, and other common scientific constants, is zero with subscript formatting, not a lowercase letter ``o''.
-\item In American English, commas, semicolons, periods, question and exclamation marks are located within quotation marks only when a complete thought or name is cited, such as a title or full quotation. When quotation marks are used, instead of a bold or italic typeface, to highlight a word or phrase, punctuation should appear outside of the quotation marks. A parenthetical phrase or statement at the end of a sentence is punctuated outside of the closing parenthesis (like this). (A parenthetical sentence is punctuated within the parentheses.)
-\item A graph within a graph is an ``inset'', not an ``insert''. The word alternatively is preferred to the word ``alternately'' (unless you really mean something that alternates).
-\item Do not use the word ``essentially'' to mean ``approximately'' or ``effectively''.
-\item In your paper title, if the words ``that uses'' can accurately replace the word ``using'', capitalize the ``u''; if not, keep using lower-cased.
-\item Be aware of the different meanings of the homophones ``affect'' and ``effect'', ``complement'' and ``compliment'', ``discreet'' and ``discrete'', ``principal'' and ``principle''.
-\item Do not confuse ``imply'' and ``infer''.
-\item The prefix ``non'' is not a word; it should be joined to the word it modifies, usually without a hyphen.
-\item There is no period after the ``et'' in the Latin abbreviation ``et al.''.
-\item The abbreviation ``i.e.'' means ``that is'', and the abbreviation ``e.g.'' means ``for example''.
-\end{itemize}
-An excellent style manual for science writers is \cite{b7}.
-
-\subsection{Authors and Affiliations}
-\textbf{The class file is designed for, but not limited to, six authors.} A 
-minimum of one author is required for all conference articles. Author names 
-should be listed starting from left to right and then moving down to the 
-next line. This is the author sequence that will be used in future citations 
-and by indexing services. Names should not be listed in columns nor group by 
-affiliation. Please keep your affiliations as succinct as possible (for 
-example, do not differentiate among departments of the same organization).
-
-\subsection{Identify the Headings}
-Headings, or heads, are organizational devices that guide the reader through 
-your paper. There are two types: component heads and text heads.
-
-Component heads identify the different components of your paper and are not 
-topically subordinate to each other. Examples include Acknowledgments and 
-References and, for these, the correct style to use is ``Heading 5''. Use 
-``figure caption'' for your Figure captions, and ``table head'' for your 
-table title. Run-in heads, such as ``Abstract'', will require you to apply a 
-style (in this case, italic) in addition to the style provided by the drop 
-down menu to differentiate the head from the text.
-
-Text heads organize the topics on a relational, hierarchical basis. For 
-example, the paper title is the primary text head because all subsequent 
-material relates and elaborates on this one topic. If there are two or more 
-sub-topics, the next level head (uppercase Roman numerals) should be used 
-and, conversely, if there are not at least two sub-topics, then no subheads 
-should be introduced.
-
-\subsection{Figures and Tables}
-\paragraph{Positioning Figures and Tables} Place figures and tables at the top and 
-bottom of columns. Avoid placing them in the middle of columns. Large 
-figures and tables may span across both columns. Figure captions should be 
-below the figures; table heads should appear above the tables. Insert 
-figures and tables after they are cited in the text. Use the abbreviation 
-``Fig.~\ref{fig}'', even at the beginning of a sentence.
+A Tabela \ref{tab:execucao} apresenta o estado interno dos registradores a cada iteração executada pelo código Assembly.
 
 \begin{table}[htbp]
-\caption{Table Type Styles}
-\begin{center}
-\begin{tabular}{|c|c|c|c|}
+\caption{Validação dos Registradores em Assembly (Raiz de 121)}
+\label{tab:execucao}
+\centering
+\begin{tabular}{ccccc}
 \hline
-\textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
-\cline{2-4} 
-\textbf{Head} & \textbf{\textit{Table column subhead}}& \textbf{\textit{Subhead}}& \textbf{\textit{Subhead}} \\
+\textbf{Passo} & \textbf{A} (Binário) & \textbf{X} (Binário) & \textbf{T} (Binário) & \textbf{Q} (Binário) \\
 \hline
-copy& More table copy$^{\mathrm{a}}$& &  \\
+Inicial & 00000000 & 01111001 & 00000000 & 0000 \\
+1 & 00000001 & 11100100 & 00000000 & 0001 \\
+2 & 00000011 & 10010000 & 11111100 & 0010 \\
+3 & 00001110 & 01000000 & 00000101 & 0101 \\
+4 & 00010101 & 00000000 & 00000000 & 1011 \\
 \hline
-\multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
+\multicolumn{5}{c}{\scriptsize Saída Final: Q = 1011 (Decimal 11) | Resto (A) = 0} \\
+\hline
 \end{tabular}
-\label{tab1}
-\end{center}
 \end{table}
 
-\begin{figure}[htbp]
-\centerline{\includegraphics{fig1.png}}
-\caption{Example of a figure caption.}
-\label{fig}
-\end{figure}
+A execução em Assembly demonstrou que as atualizações dos bits ocorrem de forma precisa. No passo 2, a subtração gerou um $T$ negativo (11111100 em complemento de 2), resultando num salto para a próxima etapa sem alterar $A$ e mantendo o novo bit de $Q$ em 0. Ao final do passo 4, o registrador $Q$ armazenou o valor 1011 (11 em decimal), confirmando a extração exata da raiz quadrada de 121.
 
-Figure Labels: Use 8 point Times New Roman for Figure labels. Use words 
-rather than symbols or abbreviations when writing Figure axis labels to 
-avoid confusing the reader. As an example, write the quantity 
-``Magnetization'', or ``Magnetization, M'', not just ``M''. If including 
-units in the label, present them within parentheses. Do not label axes only 
-with units. In the example, write ``Magnetization (A/m)'' or ``Magnetization 
-\{A[m(1)]\}'', not just ``A/m''. Do not label axes with a ratio of 
-quantities and units. For example, write ``Temperature (K)'', not 
-``Temperature/K''.
+\section{Conclusão}
+Este trabalho demonstrou o processo metodológico completo de implementação de um algoritmo otimizado para hardware. A escolha pelo método \textit{shift-and-subtract} provou-se altamente vantajosa, uma vez que prescinde de unidades divisoras e multiplicadoras.
 
-\section*{Acknowledgment}
-
-The preferred spelling of the word ``acknowledgment'' in America is without 
-an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
-G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
-acknowledgments in the unnumbered footnote on the first page.
-
-\section*{References}
-
-Please number citations consecutively within brackets \cite{b1}. The 
-sentence punctuation follows the bracket \cite{b2}. Refer simply to the reference 
-number, as in \cite{b3}---do not use ``Ref. \cite{b3}'' or ``reference \cite{b3}'' except at 
-the beginning of a sentence: ``Reference \cite{b3} was the first $\ldots$''
-
-Number footnotes separately in superscripts. Place the actual footnote at 
-the bottom of the column in which it was cited. Do not put footnotes in the 
-abstract or reference list. Use letters for table footnotes.
-
-Unless there are six authors or more give all authors' names; do not use 
-``et al.''. Papers that have not been published, even if they have been 
-submitted for publication, should be cited as ``unpublished'' \cite{b4}. Papers 
-that have been accepted for publication should be cited as ``in press'' \cite{b5}. 
-Capitalize only the first word in a paper title, except for proper nouns and 
-element symbols.
-
-For papers published in translation journals, please give the English 
-citation first, followed by the original foreign-language citation \cite{b6}.
+O código em linguagem C garantiu a robustez funcional do algoritmo, enquanto a transcrição bem-sucedida para o protótipo em \texttt{main.asm} confirmou que o mapeamento de registradores e o controle de fluxo por \textit{flags} de status são perfeitamente viáveis. Com a prova de conceito em Assembly totalmente funcional, conclui-se que o \textit{datapath} e a máquina de estados (FSM) estão maduros e estruturalmente prontos para a etapa final: a descrição em hardware utilizando Verilog e a respectiva síntese na FPGA.
 
 \begin{thebibliography}{00}
-\bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
-\bibitem{b2} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
-\bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
-\bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
-\bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
-\bibitem{b6} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
-\bibitem{b7} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
+\bibitem{ref1} D. Patterson e J. Hennessy, \textit{Organização e Projeto de Computadores: A Interface Hardware/Software}, 5ª ed. Rio de Janeiro: Elsevier, 2017.
+\bibitem{ref2} M. M. Mano e M. D. Ciletti, \textit{Digital Design: With an Introduction to the Verilog HDL}, 5ª ed. Pearson, 2012.
 \end{thebibliography}
-\vspace{12pt}
-\color{red}
-IEEE conference templates contain guidance text for composing and formatting conference papers. Please ensure that all template text is removed from your conference paper prior to submission to the conference. Failure to remove the template text from your paper may result in your paper not being published.
 
 \end{document}
