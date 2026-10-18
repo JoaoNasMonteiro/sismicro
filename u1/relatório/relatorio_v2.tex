@@ -1,0 +1,300 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\makeatletter
+\expandafter\ifx\csname englishdate\endcsname\relax
+\else
+  \let\englishdate\undefined
+\fi
+\makeatother
+
+\usepackage[portuguese, english]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\lstset{
+    backgroundcolor=\color{white},
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    showstringspaces=false,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=5pt,
+    xleftmargin=1.8em,
+    framexleftmargin=1.5em,
+    xrightmargin=0.3em,
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=2
+}
+
+\begin{document}
+
+\title{Algoritmo Dígito por Dígito para Cálculo de Raiz Quadrada em Ponto Fixo no ATmega328}
+
+\author{
+	\IEEEauthorblockN{
+		Gabriel Luduvice Nunes Wolfovitch, João Pedro Nascimento Monteiro, \\
+		João Vítor de Araújo Costa de Oliveira e Lucas Miranda Campos
+	}
+	\IEEEauthorblockA{
+		\textit{Departamento de Engenharia Elétrica e de Computação (DEEC)} \\
+		\textit{Universidade Federal da Bahia (UFBA)} \\
+		Salvador, Brasil
+	}
+}
+
+\maketitle
+
+\begin{abstract}
+	Sistemas embarcados de instrumentação baseados em microcontroladores de 8 bits frequentemente necessitam linearizar grandezas físicas proporcionais ao quadrado do sinal medido, exigindo o cálculo eficiente da função raiz quadrada ($\sqrt{x}$). Restrições severas de memória e ausência de unidade de ponto flutuante (FPU) ou divisor em hardware no ATmega328 inviabilizam o uso de bibliotecas matemáticas convencionais. Este artigo apresenta a implementação e a caracterização técnica de um algoritmo iterativo de extração de raiz quadrada binária dígito a dígito (\textit{shift-and-subtract} restaurador) desenvolvido em linguagem Assembly AVR. O sistema recebe radicandos inteiros sem sinal de 16 bits no formato Q16.0 e produz resultados em ponto fixo no formato Q8.6 após 14 iterações determinísticas. A análise numérica e arquitetural demonstra que a solução requer apenas 13 registradores da CPU, executa em aproximadamente 732 ciclos de clock ($45{,}75\ \mu\text{s}$ a $16\text{ MHz}$) e garante erro absoluto estritamente limitado por um bit menos significativo ($\text{Erro} < 2^{-6} = 0{,}015625$).
+\end{abstract}
+
+\begin{IEEEkeywords}
+	Raiz Quadrada, Ponto Fixo, Assembly AVR, ATmega328, Sistemas Embarcados, Análise de Erro Numérico.
+\end{IEEEkeywords}
+
+\section{Introdução}
+Em sistemas embarcados de instrumentação — como medidores de vazão por pressão diferencial ou sensores de valor eficaz (RMS) —, a grandeza digitalizada pelo conversor analógico-digital é frequentemente proporcional ao quadrado da variável física de interesse ($x \propto y^2$). Para recuperar a grandeza original $y = \sqrt{x}$ em um microcontrolador de 8 bits como o ATmega328, o projeto enfrenta restrições arquiteturais importantes: a Unidade Lógica e Aritmética (ALU) opera nativamente sobre palavras de 8 bits, não dispõe de instruções de divisão em hardware e não possui unidade de ponto flutuante (FPU) dedicada \cite{ref1}.
+
+A utilização de emulação de ponto flutuante em software (padrão IEEE 754) ou de métodos iterativos baseados em divisões sucessivas, como o método de Newton-Raphson, eleva substancialmente o consumo de memória de programa (Flash), o tempo de execução e a incerteza temporal (\textit{jitter}). Para superar essas limitações, este trabalho documenta e analisa a implementação em Assembly AVR de um algoritmo de extração de raiz quadrada dígito a dígito em aritmética de ponto fixo, convertendo uma entrada inteira no formato \textbf{Q16.0} para uma saída fracionária no formato \textbf{Q8.6}.
+
+\section{A Técnica Utilizada e Seu Funcionamento}
+O algoritmo adotado baseia-se no método clássico de extração de raiz quadrada dígito a dígito na base 2 (radix-2), classificado como um algoritmo de deslocamento e subtração (\textit{shift-and-subtract}) do tipo restaurador \cite{ref2}.
+
+\subsection{Fundamentação Matemática}
+Seja $X$ o radicando inteiro de entrada e $Q_k$ a aproximação parcial da raiz quadrada construída até a $k$-ésima iteração. A cada nova iteração, o algoritmo desloca a raiz parcial uma posição binária à esquerda e testa se o novo bit menos significativo $b_k \in \{0, 1\}$ deve ser igual a $1$. Pela expansão binomial do quadrado de $(2Q_{k-1} + b_k)$, tem-se:
+\begin{equation}
+	(2Q_{k-1} + b_k)^2 = 4Q_{k-1}^2 + (4Q_{k-1} + b_k)b_k
+	\label{eq:binomial}
+\end{equation}
+
+Se escolhermos $b_k = 1$, o incremento quadrático em relação ao quadrado parcial anterior ($4Q_{k-1}^2$) é dado pelo termo de teste $T_k$:
+\begin{equation}
+	T_k = (2Q_{k-1} + 1)^2 - 4Q_{k-1}^2 = 4Q_{k-1} + 1
+	\label{eq:termo_teste}
+\end{equation}
+
+Em representação binária, multiplicar $Q_{k-1}$ por $4$ e somar $1$ equivale a deslocar $Q_{k-1}$ dois bits para a esquerda e concatenar o par de bits \texttt{01} nas duas posições menos significativas:
+\begin{equation}
+	T_k = (Q_{k-1} \ll 2) \mid 01_2
+	\label{eq:concatenacao}
+\end{equation}
+
+Paralelamente, o radicando $X$ é consumido da esquerda para a direita (do bit mais significativo para o menos significativo) em grupos de 2 bits por iteração, pois $(2^1)^2 = 2^2 = 4$. O resto parcial $A_k$ é atualizado deslocando-se o resto anterior dois bits à esquerda e inserindo os 2 bits mais significativos atuais de $X$:
+\begin{equation}
+	A_k = (A_{k-1} \ll 2) \mid X_{\text{MSB}[15:14]}
+	\label{eq:resto}
+\end{equation}
+
+Em seguida, calcula-se a diferença de teste $S_k = A_k - T_k$:
+\begin{itemize}
+	\item \textbf{Caso $S_k \ge 0$:} O resíduo $A_k$ comporta a subtração. O novo bit da raiz é $b_k = 1$, o resto parcial é atualizado ($A_k \leftarrow S_k$) e a raiz parcial passa a ser $Q_k = (Q_{k-1} \ll 1) \mid 1$.
+	\item \textbf{Caso $S_k < 0$:} O termo de teste excede o resíduo disponível. O novo bit da raiz é $b_k = 0$, o resto parcial anterior $A_k$ é preservado (caracterizando o método como \textit{restaurador}) e a raiz parcial recebe apenas o deslocamento $Q_k = (Q_{k-1} \ll 1)$.
+\end{itemize}
+
+\subsection{Extensão para Ponto Fixo (Q16.0 para Q8.6)}
+Para uma entrada $X$ de 16 bits no formato inteiro Q16.0, as primeiras $8$ iterações consomem integralmente os $8$ pares de bits do radicando ($8 \times 2 = 16$ bits), produzindo os \textbf{8 bits da parte inteira} da raiz quadrada ($\lfloor\sqrt{X}\rfloor$).
+
+Ao término da 8ª iteração, o registrador de entrada encontra-se completamente zerado. Contudo, caso ainda exista resto não nulo em $A_8$, a execução de iterações adicionais continua deslocando pares de bits \texttt{00} para dentro de $A_k$. Matematicamente, realizar $F$ iterações extras após esgotar os bits de $X$ equivale a multiplicar o radicando original por $4^F = 2^{2F}$ e extrair a raiz inteira:
+\begin{equation}
+	Q_{8+F} = \left\lfloor \sqrt{X \cdot 2^{2F}} \right\rfloor = \left\lfloor 2^F \sqrt{X} \right\rfloor
+	\label{eq:escala}
+\end{equation}
+
+Como a implementação executa um total de $N = 14$ iterações ($8$ inteiras $+ 6$ fracionárias, com $F = 6$), o valor binário final armazenado no registrador de saída está escalonado por $2^6 = 64$, correspondendo diretamente à representação em ponto fixo \textbf{Q8.6}.
+
+\section{Implementação em Assembly no ATmega328}
+Como a arquitetura AVR possui registradores de uso geral de 8 bits (\texttt{R0} a \texttt{R31}), todas as variáveis de 16 bits do caminho de dados foram implementadas agrupando pares de registradores adjacentes (\textit{High:Low}), aproveitando instruções nativas de transferência de palavras de 16 bits como \texttt{MOVW} e operações aritméticas em cascata via \textit{Carry flag}.
+
+\subsection{Alocação de Registradores}
+A Tabela \ref{tab:registradores} detalha o mapeamento dos registradores utilizado no programa \texttt{main.asm}. Ao todo, são empregados 13 registradores da CPU.
+
+\begin{table}[htbp]
+	\caption{Mapeamento de Registradores na Implementação Assembly}
+	\label{tab:registradores}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{4pt}
+	\begin{tabularx}{\columnwidth}{@{}llX@{}}
+		\toprule
+		\textbf{Símbolo}           & \textbf{Reg.}     & \textbf{Função no Algoritmo}                                  \\
+		\midrule
+		\texttt{INPUT}             & \texttt{R19:R18}  & Radicando de entrada $X$ em Q16.0 (deslocado 2 bits/iteração) \\
+		\texttt{RESP}              & \texttt{R21:R20}  & Acumulador da raiz parcial $Q_k$ e saída final em Q8.6        \\
+		\texttt{A}                 & \texttt{R23:R22}  & Resto parcial de trabalho $A_k$                               \\
+		\texttt{SINAL}             & \texttt{R25:R24}  & Diferença temporária $S_k = A_k - T_k$                        \\
+		\texttt{RESP\_TEMP}        & \texttt{R27:R26}  & Termo de teste $T_k = (Q_{k-1} \ll 2) \mid 1$                 \\
+		\texttt{R28}, \texttt{R29} & \texttt{R28, R29} & Contadores dos sub-laços de deslocamento duplo ($2\times$)    \\
+		\texttt{R30}               & \texttt{R30}      & Contador principal de iterações ($N = \text{0x0E} = 14$)      \\
+		\texttt{R16}               & \texttt{R16}      & Inicialização do ponteiro de pilha (\texttt{SPH:SPL})         \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\subsection{Estrutura das Sub-rotinas e Caminho de Dados}
+A Listagem \ref{lst:asm} apresenta o núcleo funcional do código Assembly implementado para o ATmega328.
+
+\begin{lstlisting}[caption={Nucleo do algoritmo em Assembly AVR (main.asm).}, label={lst:asm}]
+; Sub-rotina de teste e atualizacao da raiz
+CALCULA_SINAL:
+  MOVW RESP_TEMP_HIGH:RESP_TEMP_LOW, RESP_HIGH:RESP_LOW
+  LDI  R28, 0x02      ; Contador p/ {RESP, 01}
+SHIFT_SINAL:
+  LSL  RESP_TEMP_LOW
+  ROL  RESP_TEMP_HIGH
+  DEC  R28
+  BRNE SHIFT_SINAL
+
+  SBR  RESP_TEMP_LOW, 0x01
+  MOVW SINAL_HIGH:SINAL_LOW, A_HIGH:A_LOW
+  SUB  SINAL_LOW, RESP_TEMP_LOW
+  SBC  SINAL_HIGH, RESP_TEMP_HIGH
+
+  BRMI NEGATIVO       ; Desvia se S_k < 0
+  LSL  RESP_LOW
+  ROL  RESP_HIGH
+  MOVW A_HIGH:A_LOW, SINAL_HIGH:SINAL_LOW
+  SBR  RESP_LOW, 0x01
+  RET
+NEGATIVO:
+  LSL  RESP_LOW
+  ROL  RESP_HIGH
+  RET
+
+; Sub-rotina de deslocamento duplo (INPUT -> A)
+SHIFT_DOIS:
+  LDI  R29, 0x02      ; Contador p/ 2 shifts
+SHIFT:
+  LSL  INPUT_LOW
+  ROL  INPUT_HIGH
+  ROL  A_LOW
+  ROL  A_HIGH
+  DEC  R29
+  BRNE SHIFT
+  RET
+\end{lstlisting}
+
+O funcionamento coordenado divide-se em três blocos principais:
+\begin{enumerate}
+	\item \textbf{Inicialização e Controle (\texttt{MAIN} e \texttt{LOOP}):} O ponteiro de pilha (\texttt{SPH:SPL}) é apontado para o topo da SRAM (\texttt{RAMEND}) para suportar chamadas de sub-rotina. Os registradores \texttt{RESP}, \texttt{A} e \texttt{SINAL} são zerados com \texttt{CLR}, e \texttt{R30} é carregado com \texttt{0x0E} ($14$ em decimal). O laço principal invoca sequencialmente \texttt{SHIFT\_DOIS} e \texttt{CALCULA\_SINAL} até que \texttt{R30} atinja zero.
+	\item \textbf{Alimentação do Resto Parcial (\texttt{SHIFT\_DOIS}):} Executa duas vezes a sequência encadeada \texttt{LSL INPUT\_LOW} $\rightarrow$ \texttt{ROL INPUT\_HIGH} $\rightarrow$ \texttt{ROL A\_LOW} $\rightarrow$ \texttt{ROL A\_HIGH}. Como a instrução \texttt{LSL} desloca o bit 7 para a \textit{flag Carry} ($C$) e preenche o bit 0 com zero, e a instrução \texttt{ROL} insere o \textit{Carry} anterior no bit 0 enquanto envia o bit 7 adiante, os 4 registradores comportam-se como um único registrador de deslocamento de 32 bits. Em duas passagens, os 2 bits mais significativos de \texttt{INPUT} migram para os 2 bits menos significativos de \texttt{A}. Após a 8ª iteração, \texttt{INPUT} contém apenas zeros, alimentando automaticamente os pares \texttt{00} necessários para a parte fracionária.
+	\item \textbf{Construção do Termo de Teste e Subtração (\texttt{CALCULA\_SINAL}):} Copia a resposta parcial para \texttt{RESP\_TEMP} via \texttt{MOVW}, desloca o par 2 bits à esquerda e aplica \texttt{SBR RESP\_TEMP\_LOW, 0x01} para fixar o bit 0 em $1$, formando $T_k = 4Q_{k-1} + 1$. Em seguida, copia \texttt{A} para \texttt{SINAL} e efetua a subtração de 16 bits com propagação de empréstimo (\texttt{SUB} seguido de \texttt{SBC}). A decisão é tomada pela instrução \texttt{BRMI NEGATIVO}, que inspeciona a \textit{flag Negative} ($N$) do registrador de status (\texttt{SREG}): se $N = 0$, \texttt{A} recebe \texttt{SINAL} e \texttt{RESP} é deslocado recebendo bit $1$; se $N = 1$, \texttt{A} mantém seu valor anterior e \texttt{RESP} recebe bit $0$.
+\end{enumerate}
+
+\section{Especificações Técnicas e Custo Computacional}
+
+\subsection{Formatos de Dados, Precisão e Limites Representáveis}
+A Tabela \ref{tab:limites} sintetiza os parâmetros numéricos da entrada e da saída da implementação.
+
+\begin{table}[htbp]
+	\caption{Especificações Numéricas de Entrada e Saída}
+	\label{tab:limites}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{3.5pt}
+	\begin{tabularx}{\columnwidth}{@{}Xcc@{}}
+		\toprule
+		\textbf{Parâmetro Técnico} & \textbf{Entrada (\texttt{INPUT})} & \textbf{Saída (\texttt{RESP})}   \\
+		\midrule
+		Notação Ponto Fixo         & Q16.0 (sem sinal)                 & Q8.6 (sem sinal)                 \\
+		Largura Registrador        & 16 bits (\texttt{R19:R18})        & 16 bits (\texttt{R21:R20})       \\
+		Bits Efetivos              & 16 bits ($[15:0]$)                & 14 bits ($[13:0]$)               \\
+		Bits Int. / Frac.          & 16 int / 0 frac                   & 8 int / 6 frac                   \\
+		Resolução (1 LSB)          & $2^0 = 1$                         & $2^{-6} = 0{,}015625$            \\
+		Valor Mínimo               & $0$ (\texttt{0x0000})             & $0{,}0$ (\texttt{0x0000})        \\
+		Valor Máximo               & $65535$ (\texttt{0xFFFF})         & $255{,}984375$ (\texttt{0x3FFF}) \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+Para converter o valor binário bruto $R_{\text{raw}}$ contido em \texttt{RESP\_HIGH:RESP\_LOW} após a 14ª iteração para sua grandeza real estimada $\hat{y}$, divide-se o inteiro sem sinal por $2^6 = 64$:
+\begin{equation}
+	\hat{y} = \frac{R_{\text{raw}}}{64} = (\texttt{RESP\_HIGH} \ll 2) + \frac{\texttt{RESP\_LOW}}{64}
+	\label{eq:conversao}
+\end{equation}
+
+\subsection{Análise dos Limites Internos e do Desvio Condicional}
+Uma análise arquitetural detalhada revela duas características importantes decorrentes do uso de registradores internos de 16 bits:
+\begin{enumerate}
+	\item \textbf{Escolha de 14 Iterações (Q8.6) e Prevenção de Overflow em 16 bits:} A cada iteração $k$, o registrador \texttt{RESP} acumula $k$ bits significativos. Na sub-rotina \texttt{CALCULA\_SINAL}, o valor de \texttt{RESP\_TEMP} é obtido deslocando \texttt{RESP} duas posições à esquerda ($Q_{k-1} \ll 2$). Na 14ª iteração ($k = 14$), $Q_{13}$ possui até 13 bits, de modo que $T_{14} = (Q_{13} \ll 2) \mid 1$ ocupa até \textbf{15 bits}, cabendo integralmente no par \texttt{R27:R26} sem transbordamento. Caso o contador \texttt{R30} fosse ajustado para 16 iterações (visando saída Q8.8), $T_{15}$ e $T_{16}$ exigiriam 16 e 17 bits respectivamente, causando perda dos bits mais significativos (\textit{overflow}) durante o deslocamento em registradores de 16 bits.
+	\item \textbf{Efeito da Instrução \texttt{BRMI} em Radicandos Elevados:} A instrução \texttt{BRMI} testa a \textit{flag} de sinal $N$ (bit 15 de \texttt{SINAL\_HIGH}). Enquanto o bit 15 de \texttt{A} e de \texttt{SINAL} permanece em zero, a subtração em complemento de dois de 16 bits identifica exatamente se $A_k < T_k$. Contudo, para radicandos $X \ge 16384$ (\texttt{0x4000}), nos quais $\sqrt{X} \ge 128$, o bit mais significativo da resposta ($b_1 = 1$) atinge a posição de bit 12 em $Q_{13}$ e, ao ser deslocado 2 vezes na 14ª iteração, ocupa o bit 14 de \texttt{RESP\_TEMP}; se simultaneamente o resíduo parcial ou o resultado da subtração alcançar o bit 15 (\texttt{0x8000}), a \textit{flag} $N$ é ativada. Portanto, o uso de \texttt{BRMI} opera sem ambiguidade de sinal em toda a faixa de $0 \le X < 16384$, podendo ser estendido para toda a faixa de 16 bits sem sinal ($0 \le X \le 65535$) com a simples substituição de \texttt{BRMI} por \texttt{BRCS} (\textit{Branch if Carry Set}), que avalia diretamente o empréstimo (\textit{borrow}) sem sinal.
+\end{enumerate}
+
+\subsection{Custo Computacional (Ciclos de Clock e Memória)}
+A avaliação de desempenho no ATmega328 foi conduzida contabilizando os ciclos de máquina de cada instrução AVR:
+\begin{itemize}
+	\item \textbf{Custo de \texttt{SHIFT\_DOIS}:} \texttt{CALL} (4 ciclos) $+$ \texttt{LDI} (1) $+$ 2 iterações de [\texttt{LSL} (1) $+$ $3\times$\texttt{ROL} (3) $+$ \texttt{DEC} (1) $+$ \texttt{BRNE} (2 na 1ª, 1 na 2ª)] (13 ciclos) $+$ \texttt{RET} (4 ciclos) $= \mathbf{22\text{ \textbf{ciclos}}}$.
+	\item \textbf{Custo de \texttt{CALCULA\_SINAL}:} \texttt{CALL} (4) $+$ \texttt{MOVW} (1) $+$ \texttt{LDI} (1) $+$ laço \texttt{SHIFT\_SINAL} (9) $+$ \texttt{SBR} (1) $+$ \texttt{MOVW} (1) $+$ \texttt{SUB} (1) $+$ \texttt{SBC} (1) $+$ decisão e retorno (8 ciclos se $S_k \ge 0$; 7 ciclos se $S_k < 0$) $= \mathbf{26\text{ \textbf{ou }}27\text{ \textbf{ciclos}}}$.
+	\item \textbf{Controle do \texttt{LOOP}:} \texttt{DEC R30} (1) $+$ \texttt{BRNE} (2 ciclos nas 13 primeiras iterações; 1 ciclo na última).
+\end{itemize}
+
+Cada uma das 14 iterações consome entre $51$ e $52$ ciclos de clock. Somando os $13$ ciclos de inicialização da pilha e dos registradores na rotina \texttt{MAIN}, o tempo total de execução situa-se entre \textbf{726 e 740 ciclos de clock} (média de $733$ ciclos). Operando na frequência padrão de $16\text{ MHz}$ do ATmega328, o cálculo completo leva apenas **$45{,}8\ \mu\text{s}$**, com variação máxima (\textit{jitter}) de $14$ ciclos ($0{,}875\ \mu\text{s}$), atendendo com folga sistemas de controle em tempo real.
+
+\section{Análise do Erro da Estimativa}
+
+\subsection{Erro de Truncamento e Viés Sistemático}
+Como o algoritmo interrompe a extração na 6ª casa fracionária binária sem etapa adicional de arredondamento, a operação realizada é matematicamente equivalente à função piso (\textit{floor}) aplicada sobre a raiz escalonada:
+\begin{equation}
+	\hat{y}(X) = \frac{\lfloor 2^6 \sqrt{X} \rfloor}{2^6} = \frac{\lfloor 64\sqrt{X} \rfloor}{64}
+	\label{eq:floor}
+\end{equation}
+
+Pela desigualdade fundamental da função piso, sabe-se que $\lfloor 64\sqrt{X} \rfloor \le 64\sqrt{X} < \lfloor 64\sqrt{X} \rfloor + 1$. Dividindo todos os termos por $64$, obtém-se o intervalo exato do erro absoluto $e_{\text{abs}}(X) = \hat{y}(X) - \sqrt{X}$:
+\begin{equation}
+	-2^{-6} < \hat{y}(X) - \sqrt{X} \le 0 \;\Rightarrow\; 0 \le \sqrt{X} - \hat{y}(X) < 0{,}015625
+	\label{eq:cota_erro}
+\end{equation}
+
+Conclui-se que:
+\begin{enumerate}
+	\item \textbf{Ausência de Sobressinal:} A estimativa possui viés exclusivamente não-positivo ($\hat{y}(X) \le \sqrt{X}$), nunca superestimando a grandeza física medida.
+	\item \textbf{Exatidão em Quadrados Perfeitos:} Para qualquer entrada $X$ cuja raiz quadrada possua representação binária exata com até 6 bits fracionários (incluindo todos os quadrados perfeitos inteiros), o resto parcial zera e o erro é \textbf{exatamente nulo} ($e_{\text{abs}} = 0$).
+	\item \textbf{Limitante Superior Estrito:} O erro absoluto máximo é estritamente inferior a 1 LSB da representação Q8.6 ($|e_{\text{abs}}| < 0{,}015625$).
+	\item \textbf{Comportamento do Erro Relativo:} O erro relativo percentual, limitado por $|e_{\text{rel}}| < \frac{0{,}015625}{\sqrt{X}} \times 100\%$ para $X \ge 1$, decai monotonicamente com a raiz do radicando, sendo inferior a $0{,}16\%$ para qualquer $X \ge 100$.
+\end{enumerate}
+
+\subsection{Validação Numérica}
+A Tabela \ref{tab:erros} apresenta a comparação entre o valor real de referência ($\sqrt{X}$) e a saída produzida pelo algoritmo em Q8.6 para diferentes pontos de operação da entrada Q16.0.
+
+\begin{table*}[t]
+	\caption{Comparação entre Referência Real e Estimativa do Algoritmo (Q8.6)}
+	\label{tab:erros}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{10pt}
+	\begin{tabular}{cccccc}
+		\toprule
+		\textbf{Entrada $X$ (Q16.0)} & \textbf{Saída Hex (Q8.6)} & \textbf{Estimativa $\hat{y}$ (Decimal)} & \textbf{Valor Real $\sqrt{X}$ (Referência)} & \textbf{Erro Absoluto $|e_{\text{abs}}|$} & \textbf{Erro Relativo $|e_{\text{rel}}|$ (\%)} \\
+		\midrule
+		$0$                          & \texttt{0x0000}           & $0{,}000000$                            & $0{,}000000$                                & $0{,}000000$                              & $0{,}000\%$                                    \\
+		$2$                          & \texttt{0x005A}           & $1{,}406250$                            & $1{,}414214$                                & $0{,}007964$                              & $0{,}563\%$                                    \\
+		$10$                         & \texttt{0x00CA}           & $3{,}156250$                            & $3{,}162278$                                & $0{,}006028$                              & $0{,}191\%$                                    \\
+		$121$                        & \texttt{0x02C0}           & $11{,}000000$                           & $11{,}000000$                               & $0{,}000000$                              & $0{,}000\%$                                    \\
+		$255$                        & \texttt{0x03FD}           & $15{,}953125$                           & $15{,}968719$                               & $0{,}015594$                              & $0{,}098\%$                                    \\
+		$1000$                       & \texttt{0x07E7}           & $31{,}609375$                           & $31{,}622777$                               & $0{,}013402$                              & $0{,}042\%$                                    \\
+		$10000$                      & \texttt{0x1900}           & $100{,}000000$                          & $100{,}000000$                              & $0{,}000000$                              & $0{,}000\%$                                    \\
+		$16383$                      & \texttt{0x1FFF}           & $127{,}984375$                          & $127{,}996094$                              & $0{,}011719$                              & $0{,}009\%$                                    \\
+		\bottomrule
+	\end{tabular}
+\end{table*}
+
+Os resultados experimentais confirmam a análise teórica: em todos os casos não exatos, o erro absoluto manteve-se estritamente abaixo do limite de resolução de $0{,}015625$ (atingindo $0{,}015594$ no caso crítico $X = 255$), enquanto entradas quadradas perfeitas ($121$ e $10000$) apresentaram erro zero.
+
+\section{Conclusão}
+A implementação em Assembly AVR do algoritmo dígito a dígito (\textit{shift-and-subtract}) mostrou-se altamente eficiente para o cálculo da raiz quadrada no ATmega328. Ao substituir divisões e operações em ponto flutuante por deslocamentos lógicos e subtrações de 16 bits, o sistema realiza a conversão de Q16.0 para Q8.6 em cerca de $733$ ciclos de clock ($45{,}8\ \mu\text{s}$ a $16\text{ MHz}$), utilizando apenas 13 registradores e memória de programa mínima. A análise numérica comprovou que o erro de truncamento é estritamente limitado por $2^{-6} = 0{,}015625$, garantindo previsibilidade temporal e precisão adequada para aplicações de instrumentação embarcada.
+
+\begin{thebibliography}{00}
+	\bibitem{ref1} Atmel Corporation, \textit{ATmega328P 8-bit AVR Microcontroller with 32K Bytes In-System Programmable Flash Datasheet}, Rev. 7810D-AVR-01/15, 2015.
+	\bibitem{ref2} B. Parhami, \textit{Computer Arithmetic: Algorithms and Hardware Designs}, 2nd ed. New York: Oxford University Press, 2010.
+	\bibitem{ref3} D. Patterson e J. Hennessy, \textit{Organização e Projeto de Computadores: A Interface Hardware/Software}, 5ª ed. Rio de Janeiro: Elsevier, 2017.
+\end{thebibliography}
+
+\end{document}
