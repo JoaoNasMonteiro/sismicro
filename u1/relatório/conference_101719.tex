@@ -1,151 +1,365 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
-% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
+\usepackage{mathtools}
 \usepackage{graphicx}
-\usepackage{inputenc}
-\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage[hidelinks]{hyperref}
 \usepackage{textcomp}
+\usepackage{accsupp}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}            
+\usepackage{float}              
+\usepackage{algorithm}           
+\usepackage{algpseudocode}       
 \usepackage{listings}
 \usepackage{xcolor}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-
-% Configuração para exibir o código fonte de forma elegante
-\lstset{
-    backgroundcolor=\color{white},
-    basicstyle=\ttfamily\footnotesize,
-    keywordstyle=\color{blue}\bfseries,
-    commentstyle=\color{green!60!black}\itshape,
-    stringstyle=\color{red},
-    showstringspaces=false,
-    frame=single,
-    numbers=left,
-    numberstyle=\tiny\color{gray},
-    breaklines=true
+% --- Anexo de uso de IAG ---
+\newcounter{usoiag}
+\newcommand{\usoIAG}[4]{%
+  \refstepcounter{usoiag}%
+  \par\medskip\noindent\hrule\smallskip
+  \noindent\textbf{Uso \theusoiag}\\
+  \textbf{Etapa / local de uso:} #1\\
+  \textbf{Modelo utilizado:} #2\\
+  \textit{\textbf{Prompt:}} \textit{#3}\\
+  \textbf{Observações:} #4\par
 }
+
+\floatname{algorithm}{Algoritmo}
+\algrenewcommand\algorithmicrequire{\textbf{Entrada:}}
+\algrenewcommand\algorithmicensure{\textbf{Saída:}}
+\algrenewcommand\algorithmicfor{\textbf{para}}
+\algrenewcommand\algorithmicdo{\textbf{faça}}
+\algrenewcommand\algorithmicif{\textbf{se}}
+\algrenewcommand\algorithmicthen{\textbf{então}}
+\algrenewcommand\algorithmicelse{\textbf{senão}}
+\algrenewcommand\algorithmicreturn{\textbf{retorne}}
+
+
+\definecolor{codebg}{RGB}{245, 245, 245}
+\definecolor{codegreen}{RGB}{0, 128, 0}
+\definecolor{codegray}{RGB}{128, 128, 128}
+\definecolor{codepurple}{RGB}{128, 0, 128}
+\definecolor{codeblue}{RGB}{0, 0, 180}
+
+
+\newcommand*{\nonselectablenumber}[1]{{\BeginAccSupp{ActualText={}}#1\EndAccSupp{}}}
+
+
+\lstdefinestyle{codigo}{
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codeblue},
+    numberstyle=\tiny\color{codegray}\nonselectablenumber,
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\scriptsize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    nolol=false,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=3,
+    frame=single,
+    framerule=0.5pt,
+    rulecolor=\color{codegray},
+    extendedchars=true,
+    literate=
+    {á}{{\'a}}1 {ã}{{\~a}}1 {â}{{\^a}}1 {à}{{\`a}}1
+    {é}{{\'e}}1 {ê}{{\^e}}1 {è}{{\`e}}1
+    {í}{{\'i}}1 {î}{{\^i}}1 {ì}{{\`i}}1
+    {ó}{{\'o}}1 {ô}{{\^o}}1 {õ}{{\~o}}1 {ò}{{\`o}}1
+    {ú}{{\'u}}1 {ü}{{\"u}}1 {ù}{{\`u}}1
+    {ç}{{\c{c}}}1 {Ç}{{\c{C}}}1
+}
+
+\lstset{style=codigo}
+
+\lstset{style=codigo}
 
     \begin{document}
 
 \title{Algoritmo Dígito por Dígito para Cálculo de Raiz Quadrada no ATmega328}
 \author{
-\IEEEauthorblockN{Gabriel Luduvice Nunes Wolfovitch, João Pedro Nascimento Monteiro,\\
-João Vítor de Araújo Costa de Oliveira e Lucas Miranda Campos}
+\IEEEauthorblockN{Gabriel Luduvice Nunes Wolfovitch, João Pedro Nascimento Monteiro e \\
+João Vítor de Araújo Costa de Oliveira}
 \IEEEauthorblockA{\textit{Departamento de Engenharia Elétrica e Computação (DEEC)}\\
 \textit{Universidade Federal da Bahia (UFBA)}\\
 Salvador, Brasil\\
-\{email1, email2, email3, email4\}@ufba.br
+\{gabrielwolfovitch, joaovaco, email3\}@ufba.br
 }
 }
 
 \maketitle
 
 \begin{abstract}
-O cálculo de raízes quadradas em sistemas digitais e FPGAs frequentemente esbarra no alto custo computacional e no consumo excessivo de portas lógicas quando implementado através de algoritmos tradicionais que exigem blocos de divisão e multiplicação. Este artigo apresenta o desenvolvimento, a justificativa e a validação de um algoritmo de extração de raiz quadrada binária baseado no método de deslocamento e subtração (shift-and-subtract). A metodologia adotou um fluxo de projeto estruturado: iniciou-se com a modelagem matemática em linguagem C para comprovação da estabilidade do algoritmo, seguida por uma transcrição em nível de arquitetura utilizando a linguagem Assembly. O protótipo em Assembly atuou como uma prova de conceito fundamental, mapeando o comportamento exato dos registradores e das flags de controle. Os resultados comprovam que a eliminação de operadores aritméticos complexos torna a transição para a linguagem de descrição de hardware (Verilog) direta, previsível e altamente otimizada.
+O problema proposto envolve o desenvolvimento do cálculo de uma raiz em um microcontrolador ATmega328. Como esse microcontrolador não possui uma unidade de ponto flutuante e há a impossibilidade de utilizar bibliotecas matemáticas vistas em C, este relatório apresenta um algoritmo que calcula a raiz quadrada binária pelo método dígito por dígito, feito inteiramente na linguagem Assembly. O método utiliza representação em ponto fixo, processando uma entrada de 16 bits (Q16.0) para gerar uma saída (Q8.6). A validação foi feita por meio de um teste prévio em C e testes de rastreamento, garantindo que o método dígito por dígito gera uma execução eficiente, ideal para o cálculo de variáveis.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Raiz Quadrada, Assembly, Linguagem C, FPGA, Verilog, Otimização de Hardware, Sistemas Digitais.
+Raiz Quadrada, Assembly, Linguagem C, ATmega328.
 \end{IEEEkeywords}
 
 \section{Introdução}
-O desenvolvimento de sistemas embarcados e o processamento de sinais em FPGAs (\textit{Field-Programmable Gate Arrays}) exigem algoritmos aritméticos altamente otimizados. Em linguagens de alto nível, calcular uma raiz quadrada é uma tarefa trivial, resolvida por chamadas de bibliotecas padrão (como a \texttt{math.h} em C). Contudo, ao transpor essa operação para o nível de hardware, o uso de divisores e multiplicadores dedicados consome fatias significativas de DSP (\textit{Digital Signal Processing}) e aumenta o atraso combinacional do circuito.
+O processamento em um sistema embarcado de instrumentação baseado em microcontroladores necessita realizar operações matemáticas básicas sobre as grandezas medidas, a exemplo da radiciação. Isto é, durante certas medições, o sistema recebe de sensores grandezas proporcionais ao quadrado de uma variável física. Para recuperar esta variável, é preciso calcular a raiz quadrada do valor medido.
 
-Para mitigar esse problema, este trabalho propõe a implementação de um algoritmo "bit a bit" focado estritamente em operações elementares. O objetivo principal é demonstrar que a tradução de um modelo funcional em linguagem C para um protótipo operacional em Assembly garante a confiabilidade do caminho de dados (\textit{datapath}), preparando o sistema para uma futura síntese em hardware livre de gargalos lógicos.
+No entanto, dispositivos como o ATmega328 não possuem funções nativas para o cálculo de raízes quadradas, necessitando implementações diretas. Frente às restrições relacionadas ao projeto, não é possível fazer uso de bibliotecas matemáticas, nem utilizar ponto flutuante.
 
-\section{Justificativa do Método Bit a Bit}
-A escolha do algoritmo de extração de raiz quadrada binária dígito a dígito (também conhecido como \textit{shift-and-subtract}) fundamenta-se na economia de recursos de hardware. Este método assemelha-se ao algoritmo manual de extração de raízes, adaptado para a base 2.
+Diante disso, a implementação via dígito por dígito faz uso de um algoritmo simples, baseado apenas em deslocamentos, somas e subtrações entre registradores, para realizar a operação desejada. Por se basear em agrupamentos e subdivisões, os erros associados são tão baixos quanto menor for a quantização em ponto fixo. O repositório com o código da implementação final pode ser encontrado em \cite{monteiro_sismicro}.
 
-A grande vantagem arquitetural dessa escolha é que ela abole completamente o uso de divisões e multiplicações. Toda a lógica matemática é resolvida através de:
+\section{Justificativa do Dígito por Dígito}
+A escolha da extração de raiz quadrada binária dígito a dígito foi baseada na sua simplicidade. Considerando operações em ponto fixo, este método é preferível por sua facilidade no acompanhamento e checagem, além de não necessitar de operações complexas.
+
+Toda a lógica matemática é resolvida apenas através de:
 \begin{itemize}
-    \item \textbf{Deslocamentos lógicos (\textit{Shifts}):} Operações que, em hardware, custam zero ciclos de clock adicionais, consistindo apenas em roteamento de fios no Verilog.
-    \item \textbf{Subtrações simples:} Implementadas facilmente através de somadores em complemento de 2.
-    \item \textbf{Testes de condição:} Avaliação direta do bit de sinal para tomadas de decisão.
+    \item \textbf{Deslocamentos lógicos:} Operações já nativas das instruções do ATmega328, não necessitando grandes linhas de código para sua construção.
+    \item \textbf{Subtrações:} Implementadas também nativamente entre os registradores com as instruções existentes.
+    \item \textbf{Testes de Sinal:} Avaliação direta do bit de sinal do SREG para tomadas de decisão.
 \end{itemize}
 
-Dessa forma, o custo computacional passa a ser linear em relação ao número de bits do radicando, tornando o tempo de execução previsível e compatível com máquinas de estado finito (FSM).
+Dessa forma, o custo computacional passa a ser linear em relação ao número de bits do radicando. Além disso, não há necessidade de aramzenar valores em uma \textit{Lookup Table} (LUT), nem de realizar multiplicações ou divisões.
 
+\section{Funcionamento do Algoritmo}
+Em linhas gerais, o algoritmo consiste em subdividir o número binário em subgrupos de 2 dígitos. A cada iteração, cada um desses grupos irá gerar um único dígito como resposta. Como a base binária permite apenas 0 ou 1, o dígito seguinte é decidido através da diferença entre o cálculo restante e o valor previsto.
+
+Detalhes acerca da demonstração matemática, bem como outros exemplos, podem ser encontrados em \cite{wiki_sqrt}. O algoritmo abaixo generaliza o exemplo mostrado em \cite{projectf_sqrt}
+\begin{algorithm}[htbp]
+\caption{Raiz quadrada inteira binária em ponto fixo}
+\label{alg:sqrt-registradores}
+\begin{algorithmic}[1]
+\Require Radicando $X$ de $2n$ bits (sem sinal)
+\Ensure Raiz $Q$ de $n$ bits
+
+\State $A \gets 0$ \Comment{acumulador}
+\State $Q \gets 0$ \Comment{raiz parcial}
+\For{$i \gets 1$ \textbf{até} $n$}
+    \State $A \gets (A \ll 2) \mid X[2n\!-\!1\!:\!2n\!-\!2]$ \Comment{2 bits de $X$ entram em $A$}
+    \State $X \gets X \ll 2$
+    \State $T \gets A - \{Q,\,01_2\}$ \Comment{$\{Q,01_2\} = (Q \ll 2) \mid 01_2$}
+    \State $Q \gets Q \ll 1$
+    \If{$T \geq 0$}
+        \State $A \gets T$
+        \State $Q[0] \gets 1$
+    \EndIf
+\EndFor
+\State \Return $Q$
+\end{algorithmic}
+\end{algorithm}
+
+\newpage
 \section{Modelagem em Alto Nível: Linguagem C}
-A primeira etapa do projeto consistiu em validar a matemática do método \textit{shift-and-subtract} isoladamente da arquitetura. Para isso, o algoritmo foi implementado na linguagem C. A Listagem \ref{lst:codigoC} demonstra a lógica principal (adaptada para um radicando de 8 bits).
+A primeira etapa do projeto consistiu em validar o funcionamento do algoritmo de forma simplificada e rápida. Para isso, realizou-se uma implementação na linguagem C. O código abaixo demonstra a lógica principal.
 
-\begin{lstlisting}[language=C, caption={Implementação funcional em C do algoritmo bit a bit.}, label={lst:codigoC}]
-#include <stdio.h>
-#include <stdint.h>
+\begin{lstlisting}[language=C, title={Implementação em C do algoritmo dígito por dígito.}, label={lst:codigoC}]
+    #include <stdint.h>
+    #include <stdio.h>
 
-uint8_t isqrt_8bit(uint8_t X) {
-    uint8_t Q = 0; // Raiz
-    uint8_t A = 0; // Acumulador/Resto parcial
-    int16_t T = 0; // Teste de sinal
-    
-    // Loop de 4 interacoes para radicando de 8 bits
-    for(int i = 3; i >= 0; i--) {
-        // Desloca A e insere os 2 bits mais significativos de X
-        A = (A << 2) | ((X >> (i * 2)) & 0x03);
-        
-        // Define T = A - (Q concatenado com 01)
-        T = A - ((Q << 2) | 1);
-        
-        Q = (Q << 1); // Desloca Q previamente
-        
-        // Testa se a subtracao foi positiva ou zero
-        if(T >= 0) {
-            A = T;    // Atualiza o acumulador
-            Q = Q | 1; // Seta o bit menos significativo de Q
-        }
+    typedef uint8_t REG_t;
+
+    typedef struct ufix16 {
+    REG_t MSB;
+    REG_t LSB;
+    } ufix16_t;
+
+    float evaluate_ufix16_q88(const ufix16_t *num);
+    float evaluate_ufix16_q160(const ufix16_t *num);
+    ufix16_t take_sqrt(const ufix16_t *input);
+
+    int main(void) {
+    // assume input Q16.0 e output Q8.8
+    ufix16_t num = {0x0, 0xff};
+    printf("input is %f\n", evaluate_ufix16_q160(&num));
+    ufix16_t res = take_sqrt(&num);
+    printf("result is %f\n", evaluate_ufix16_q88(&res));
+
+    return 0;
     }
-    return Q;
+
+    float evaluate_ufix16_q88(const ufix16_t *num) {
+    uint16_t raw_value = ((uint16_t)num->MSB << 8) | num->LSB;
+    return (float)raw_value / 256.0f;
+    }
+
+    float evaluate_ufix16_q160(const ufix16_t *num) {
+    uint16_t raw_value = ((uint16_t)num->MSB << 8) | num->LSB;
+    return (float)raw_value;
+    }
+
+    ufix16_t take_sqrt(const ufix16_t *input) {
+    // Alinha a entrada de 16 bits (Q16.0) em um espaço de 32 bits.
+    // Isso efetivamente multiplica o número por 2^16, convertendo para Q16.16.
+    uint32_t val = ((uint32_t)input->MSB << 24) | ((uint32_t)input->LSB << 16);
+
+    uint32_t res = 0; // Acumulador da raiz quadrada (resultado)
+
+    // O 'bit' de teste começa na maior potência de 4 que cabe em 32 bits.
+    uint32_t bit = 1UL << 30;
+    // Alinha o 'bit' inicial ao tamanho real do valor de entrada
+    while (bit > val) {
+        bit >>= 2;
+    }
+    // Laço de extração bit a bit
+    while (bit != 0) {
+        if (val >= res + bit) {
+        val = val - (res + bit);
+        res = (res >> 1) + bit;
+        } else {
+        res >>= 1;
+        }
+        bit >>= 2;
+    }
+    // 'res' agora contém a raiz exata no formato Q8.8
+    ufix16_t result;
+    result.MSB = (res >> 8) & 0xFF;
+    result.LSB = res & 0xFF;
+    return result;
 }
 \end{lstlisting}
 
-A execução deste código em C comprovou a eficácia do método. A lógica iterativa calcula pares de bits sequencialmente, reduzindo progressivamente o radicando original ($X$) enquanto constrói o resultado ($Q$). No entanto, variáveis em C não refletem os limites de registradores físicos e \textit{flags} de status de uma ALU (\textit{Arithmetic Logic Unit}), tornando a etapa seguinte mandatória.
+A execução deste código em C auxiliou na compreensão mais abstrata do funcionamento geral do projeto. Assim, este foi adotado como base para a implementação final em Assembly.
 
-\section{Prova de Conceito em Baixo Nível: O Protótipo em Assembly}
-Com a matemática validada, o algoritmo foi transcrito para a linguagem Assembly no arquivo \texttt{main.asm}. Esta etapa serviu como um protótipo em escala reduzida e foi crucial para o projeto, atuando como o verdadeiro elo de ligação entre o software e o hardware.
+\section{Descrição do Sistema Final}
+\subsection{Quantizações e Registradores}
+Para permitir uma maior amplitude de valores numéricos, utilizou-se 2 registradores para cada um dos termos descritos no algoritmo \ref{alg:sqrt-registradores}, além de 2 adicionais para a construção do valor $\{Q,\,01_2\}$. Suas identificações e faixas de endereço são:
+\begin{enumerate}
+    \item \textbf{Entrada X}  (R19:18);
+    
+    \item \textbf{Resposta Q} (R21:R20);
+    
+    \item \textbf{Valor sendo trabalhado A} (R23:R22);
+ 
+    \item \textbf{Registrador do sinal T} (R25:R24);
 
-No \texttt{main.asm}, as abstrações da linguagem C foram substituídas pelo rigor dos componentes de hardware. Definiram-se quatro registradores fundamentais:
-1) \textbf{X:} O radicando de entrada.
-2) \textbf{A:} Registrador acumulador que guarda o valor parcial em trabalho.
-3) \textbf{T:} Registrador utilizado para armazenar o resultado do teste de subtração.
-4) \textbf{Q:} Registrador responsável por armazenar a raiz quadrada final.
+    \item \textbf{Resposta temporária $\{Q,\,01_2\}$} (R27:R26).
 
-No Assembly, a operação de deslocamento bit a bit (\texttt{A = (A << 2) ...}) foi traduzida para instruções nativas de \textit{Logical Shift Left} (LSL). O grande diferencial do teste em Assembly ocorreu na avaliação da condição \texttt{if(T >= 0)}. Em vez de uma avaliação lógica de alto nível, a verificação passou a depender do comportamento natural da Unidade Lógica e Aritmética. Ao realizar a instrução de subtração para calcular $T$, a CPU atualizava suas \textit{Flags} de status. Bastou utilizar uma instrução de desvio condicional (\textit{Branch}) baseada no bit de sinal (ou \textit{Carry}) para determinar se o bit correspondente de $Q$ seria 1 ou 0.
+\end{enumerate}
 
-\section{Resultados da Validação}
-Para validar o protótipo em Assembly, realizou-se um teste de rastreamento (teste de mesa) com a entrada decimal 121 (em binário: 01111001). Como esperado para um número de 8 bits, o algoritmo resolveu o cálculo em exatamente quatro passos.
+O sistema final pressupõe uma entrada já quantizada em Q16.0. A fim de cobrir uma ampla faixa dos números inteiros, decidimos interpretar a entrada como um número de 16 bits, dos quais todos são parte inteira. Assim, o código é capaz de calcular a raiz de um número $n$ na forma: $\forall n \in \mathbb{Z}, n \in [0, 65535]$. 
 
-A Tabela \ref{tab:execucao} apresenta o estado interno dos registradores a cada iteração executada pelo código Assembly.
+Além disso, a saída foi quantizada em Q8.6. O tamanho da parte inteira da saída, conforme mostrado no algoritmo \ref{alg:sqrt-registradores}, depende apenas do tamanho da entrada. A parte fracionária, para os casos de raízes não exatas, está relacionada com a quantidade de iterações realizadas após preenchimento da parte inteira.
+
+Como cada iteração gera um dígito, o preenchimento da parte fracionária foi feito até o limite do \textit{overflow} dos registradores intermediários do cálculo.
+
+\subsection{Rotinas Principais}
+O código Assembly final tem um \textit{loop} com duas rotinas principais, a saber:
+\begin{enumerate}
+    \item SHIFT\_DOIS;
+    \item CALCULA\_SINAL.
+\end{enumerate}
+
+Na primeira, 2 bits da entrada são carregado para os registradores que irão guardar o valor sendo atualmente trabalhado. Este processo é feito através de instruções com LSL e ROL, aproveitando o carry que possa ter surgido do primeiro deslocamento. Ambos são executados duas vezes em \textit{loop}. 
+
+Na segunda etapa, ocorre a validação do sinal e a construção da resposta. O resultado atual é salvo em outro par de registradores através do MOVW, deslocado duas vezes e somado 1. Ou seja, este é o registrador $\{Q,\,01_2\}$. 
+
+Em seguida, por meio de outro MOVW e subtrações sem e com carry (SUB e SBC), a resposta será comparada por meio dos registradores A e T. O controle dessa condicional é realizado pelo bit N do SREG, indicando se houve ou não um valor negativo durante a operação. Este processo é repetido até atingir uma saída na formatação escolhida. 
+
+O diagrama completo do sistema final pode ser encontrado em \cite{monteiro_sismicro}.
+
+\newpage
+\section{Análise dos Resultados}
+Para validar o funcionamento do código em Assembly, realizou-se um teste com alguns casos particulares:
+\begin{itemize}
+    \item Extremos: Valores no limite inferior e superior do intervalo possível de representação para números em ponto fixo Q16.0
+    \item Raízes Exatas: Números que possuem raízes inteiras (``quadrados perfeitos'')
+    \item Raízes Inexatas: Números que não possuem raízes inteiras.
+\end{itemize}
+
+A Tabela \ref{tabela_teste} traz o resultado de alguns desses casos, mostrando qual foi a saída gerada a partir de cada entrada.
 
 \begin{table}[htbp]
-\caption{Validação dos Registradores em Assembly (Raiz de 121)}
-\label{tab:execucao}
 \centering
-\begin{tabular}{ccccc}
+\caption{\textsc{Casos de Teste da Raiz Quadrada (Entrada Q16, Saída Q8.6)}}
+\label{tabela_teste}
+\begin{tabular}{lcc}
 \hline
-\textbf{Passo} & \textbf{A} (Binário) & \textbf{X} (Binário) & \textbf{T} (Binário) & \textbf{Q} (Binário) \\
+\textbf{Entrada em Q16.0} & \textbf{Saída em Q8.6} \\
 \hline
-Inicial & 00000000 & 01111001 & 00000000 & 0000 \\
-1 & 00000001 & 11100100 & 00000000 & 0001 \\
-2 & 00000011 & 10010000 & 11111100 & 0010 \\
-3 & 00001110 & 01000000 & 00000101 & 0101 \\
-4 & 00010101 & 00000000 & 00000000 & 1011 \\
-\hline
-\multicolumn{5}{c}{\scriptsize Saída Final: Q = 1011 (Decimal 11) | Resto (A) = 0} \\
+0000000001111001 \ (121)   & 00001011.000000 \ (11{,}000000) \\
+0000000000000000 \ (0)     & 00000000.000000 \ (0{,}000000) \\
+1111111111111111 \ (65535) & 11111111.111111 \ (255{,}984375) \\
+0000000000000010 \ (2)     & 00000001.011010 \ (1{,}406250) \\
 \hline
 \end{tabular}
 \end{table}
 
-A execução em Assembly demonstrou que as atualizações dos bits ocorrem de forma precisa. No passo 2, a subtração gerou um $T$ negativo (11111100 em complemento de 2), resultando num salto para a próxima etapa sem alterar $A$ e mantendo o novo bit de $Q$ em 0. Ao final do passo 4, o registrador $Q$ armazenou o valor 1011 (11 em decimal), confirmando a extração exata da raiz quadrada de 121.
+Para os casos em questão, podemos perceber que o algoritmo cumpriu com o esperado. Para os casos em que a entrada possuía raiz inteira, o cálculo foi exato, sem qualquer erro envolvido. Para os casos onde a raiz não era exata, pudemos comprovar que o erro esteve sempre limitado ao menor valor passível de representação ($2^{-6} \approx 0,015625$).
+
+Isto pode ser mostrado olhando para a entrada máxima possível no intervalo de representação. O valor é $(0\text{x}FFFF)_{16}  = (65535)_{10}$. A raiz então seria $\sqrt{65535} \approx 255,998047$. 
+
+Seja $\delta$ o erro absoluto associado. Ficamos com:
+\begin{align*}
+    & \delta = 255,998047 - 255,984375 = 0.013672 \\
+    & \delta < 2^{-6} = 0,015625
+\end{align*}
+
+Conforme era esperado, já que não há ocorrência de \textit{overflow} no processo.
 
 \section{Conclusão}
-Este trabalho demonstrou o processo metodológico completo de implementação de um algoritmo otimizado para hardware. A escolha pelo método \textit{shift-and-subtract} provou-se altamente vantajosa, uma vez que prescinde de unidades divisoras e multiplicadoras.
+Este trabalho demonstrou sucesso na implementação de um algoritmo de baixo nível para um microcontrolador. A escolha do método do dígito por dígito se mostrou uma boa abordagem para a arquitetura do ATmega328, extraindo o melhor possível do método de ponto fixo. A adoção do ponto fixo permitiu não apenas processar completamente os inteiros de 16 bits (Q16.0), mas também garantir precisão fracionária na resposta (Q8.6), chegando no limite de \textit{overflow} dos registradores. Como mostrado nos testes de rastreamento, o controle de fluxo por meio da \textit{flag} de sinal do registrador de status e o mapeamento direto das variáveis para os registradores (R18 a R27) garantiram um \textit{datapath} enxuto. Pode-se concluir que o código desenvolvido em Assembly atende aos requisitos solicitados, oferecendo um tempo de execução curto e um baixo uso de memória.
 
-O código em linguagem C garantiu a robustez funcional do algoritmo, enquanto a transcrição bem-sucedida para o protótipo em \texttt{main.asm} confirmou que o mapeamento de registradores e o controle de fluxo por \textit{flags} de status são perfeitamente viáveis. Com a prova de conceito em Assembly totalmente funcional, conclui-se que o \textit{datapath} e a máquina de estados (FSM) estão maduros e estruturalmente prontos para a etapa final: a descrição em hardware utilizando Verilog e a respectiva síntese na FPGA.
+\appendix[Uso de Inteligência Artificial Generativa]
 
-\begin{thebibliography}{00}
-\bibitem{ref1} D. Patterson e J. Hennessy, \textit{Organização e Projeto de Computadores: A Interface Hardware/Software}, 5ª ed. Rio de Janeiro: Elsevier, 2017.
-\bibitem{ref2} M. M. Mano e M. D. Ciletti, \textit{Digital Design: With an Introduction to the Verilog HDL}, 5ª ed. Pearson, 2012.
+\subsection*{Declaração}
+A equipe declara que a IAG foi utilizada nas etapas descritas abaixo. O detalhamento de cada uso, incluindo os \textit{prompts} empregados, é apresentado a seguir.
+
+\subsection*{Detalhamento}
+
+\usoIAG
+  {Generalização do código em Assembly}
+  {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
+  {como esse código poderia ser escalado para lidar com números em uma faixa maior de representação? Por exemplo, em Q8.8?. Dê um direcionamento e ideias para uma implementação, sem enviar o código pronto.}
+  {O \textit{prompt} foi feito após já existir uma implementação funcional do algoritmo, porém para uma escala menor de representação, com apenas um registrador.}
+
+\usoIAG
+  {Formatação das referências bibliográficas}
+  {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
+  {formate os links de referências abaixo em um ambiente thebibliography para latex
+   em conformidade com o template IEEE conferences em português}
+   {O \textit{prompt} acompanhava a lista de referências mostrada ao final do relatório.}
+
+\usoIAG
+  {Generalização do código em Assembly}
+  {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
+  {como esse código poderia ser escalado para lidar com números em uma faixa maior de representação? Por exemplo, em Q8.8?. Dê um direcionamento e ideias para uma implementação, sem enviar o código pronto.}
+  {O \textit{prompt} foi feito após já existir uma implementação funcional do algoritmo, porém para uma escala menor de representação, com apenas um registrador para a resposta. Acompanhava também o código existente até então.}
+
+\usoIAG{Formatação e generalização do algoritmo para relatório}
+        {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
+        {escreva isso genericamente em forma de um bloco latex de algoritmo para relatório}
+        {Adaptado algumas vezes para adequar nomenclaturas. O \textit{prompt} acompanhava a imagem de um exemplo presente em \cite{projectf_sqrt}.}
+
+\usoIAG
+  {Formatação da seção anexa de IAG}
+  {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
+  {faça um template para que eu possa colocar essa seção como um anexo do arquivo já existente no latex no template IEEE Conference. Alguns campos para o prompt, indicação de onde foi usado e o modelo usado}
+   {O \textit{prompt} incluía uma imagem com as orientações para a seção de IAG. Adaptado em relação à formatação.}
+
+
+\begin{thebibliography}{1}
+\bibitem{monteiro_sismicro}
+``sismicro: Unidade 1,'' repositório GitHub. [Online]. Disponível em: \url{https://github.com/JoaoNasMonteiro/sismicro/tree/main/u1}. Acesso em: 18 out. 2026.
+
+\bibitem{wiki_sqrt}
+``Square root algorithms: Digit By Digit Calculation,'' \emph{Wikipedia, The Free Encyclopedia}. [Online]. Disponível em: \url{https://en.wikipedia.org/wiki/Square_root_algorithms#Digit-by-digit_calculation}. Acesso em: 18 out. 2026.
+
+\bibitem{projectf_sqrt}
+W. Green, ``Square root in Verilog,'' \emph{Project F}, 22 dez. 2020. [Online]. Disponível em: \url{https://projectf.io/posts/square-root-in-verilog/}. Acesso em: 18 out. 2026.
+
+\bibitem{morris_goldschmidt}
+M. Morris, ``Computing fixed-point square roots and their reciprocals using Goldschmidt algorithm,'' \emph{FPGARelated.com}, 14 jun. 2020. [Online]. Disponível em: \url{https://www.fpgarelated.com/showarticle/1347.php}. Acesso em: 18 out. 2026.
+
+\bibitem{ncot_fixedpoint}
+NCOT Technology, ``Fixed point maths explained - Retro programming,'' YouTube, 14 nov. 2021. [Vídeo]. Disponível em: \url{https://www.youtube.com/watch?v=Is67DfCdvcE}. Acesso em: 18 out. 2026.
 \end{thebibliography}
 
 \end{document}

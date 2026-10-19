@@ -37,12 +37,14 @@ Conforme descrito no relatório, a implementação não sofre por conta de *over
 ## Comparações com Outros Métodos
 Em comparação com outros métodos, o algoritmo dígito por dígito é eficaz em se aproveitar das operações de deslocamento de bits entre os registradores. Diferentemente de demais métodos numéricos, não depende de estimativas iniciais. 
 
-Além disso, sua iteração é ao longo do comprimento do número. Com isso, tem complexidade $\mathcal{O}(N)$, onde N é o tamanho do número binário.
+Além disso, sua iteração é ao longo do comprimento do número. Com isso, tem complexidade $\mathcal{O}(N)$, onde N é o número de deslocamentos realizados no número binário.
 
 
 ## Implementação em Ponto Fixo
 
-O diagrama da implementação em ponto fixo é dado a seguir:
+O diagrama completo da implementação em ponto fixo é dado a seguir:
+
+![Diagrama Completo](diagrama.png)
 
 
 ## Observações
