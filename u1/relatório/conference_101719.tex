@@ -2,8 +2,11 @@
 \IEEEoverridecommandlockouts
 
 \usepackage{cite}
+\usepackage{makecell}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{mathtools}
+\usepackage{tabularx}
+\usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
 \usepackage[brazilian]{babel}
@@ -64,7 +67,7 @@
     captionpos=b,
     nolol=false,
     keepspaces=true,
-    numbers=left,
+    numbers=right,
     numbersep=5pt,
     showspaces=false,
     showstringspaces=false,
@@ -96,7 +99,7 @@ João Vítor de Araújo Costa de Oliveira}
 \IEEEauthorblockA{\textit{Departamento de Engenharia Elétrica e Computação (DEEC)}\\
 \textit{Universidade Federal da Bahia (UFBA)}\\
 Salvador, Brasil\\
-\{gabrielwolfovitch, joaovaco, email3\}@ufba.br
+\{gabrielwolfovitch, joaovaco, monteirojoao\}@ufba.br
 }
 }
 
@@ -117,22 +120,63 @@ No entanto, dispositivos como o ATmega328 não possuem funções nativas para o 
 
 Diante disso, a implementação via dígito por dígito faz uso de um algoritmo simples, baseado apenas em deslocamentos, somas e subtrações entre registradores, para realizar a operação desejada. Por se basear em agrupamentos e subdivisões, os erros associados são tão baixos quanto menor for a quantização em ponto fixo. O repositório com o código da implementação final pode ser encontrado em \cite{monteiro_sismicro}.
 
-\section{Justificativa do Dígito por Dígito}
+\section{Técnica Utilizada e seu Funcionamento}
 A escolha da extração de raiz quadrada binária dígito a dígito foi baseada na sua simplicidade. Considerando operações em ponto fixo, este método é preferível por sua facilidade no acompanhamento e checagem, além de não necessitar de operações complexas.
 
 Toda a lógica matemática é resolvida apenas através de:
 \begin{itemize}
-    \item \textbf{Deslocamentos lógicos:} Operações já nativas das instruções do ATmega328, não necessitando grandes linhas de código para sua construção.
-    \item \textbf{Subtrações:} Implementadas também nativamente entre os registradores com as instruções existentes.
+    \item \textbf{Deslocamentos lógicos:} Operações já nativas das instruções do ATmega328, não necessitando grandes linhas de código para sua construção;
+    \item \textbf{Subtrações:} Implementadas também nativamente entre os registradores com as instruções existentes;
     \item \textbf{Testes de Sinal:} Avaliação direta do bit de sinal do SREG para tomadas de decisão.
 \end{itemize}
 
-Dessa forma, o custo computacional passa a ser linear em relação ao número de bits do radicando. Além disso, não há necessidade de aramzenar valores em uma \textit{Lookup Table} (LUT), nem de realizar multiplicações ou divisões.
+\subsection{Fundamentação Matemática}
+Seja $X$ o radicando inteiro de entrada e $Q_k$ a aproximação parcial da raiz quadrada construída até a $k$-ésima iteração. A cada nova iteração, o algoritmo desloca a raiz parcial uma posição binária à esquerda e testa se o novo bit menos significativo $b_k \in \{0, 1\}$ deve ser igual a $1$. Pela expansão binomial do quadrado de $(2Q_{k-1} + b_k)$, tem-se:
+\begin{equation}
+	(2Q_{k-1} + b_k)^2 = 4Q_{k-1}^2 + (4Q_{k-1} + b_k)b_k
+	\label{eq:binomial}
+\end{equation}
+
+Se escolhermos $b_k = 1$, o incremento quadrático em relação ao quadrado parcial anterior ($4Q_{k-1}^2$) é dado pelo termo de teste $T_k$:
+\begin{equation}
+	T_k = (2Q_{k-1} + 1)^2 - 4Q_{k-1}^2 = 4Q_{k-1} + 1
+	\label{eq:termo_teste}
+\end{equation}
+
+Em representação binária, multiplicar $Q_{k-1}$ por $4$ e somar $1$ equivale a deslocar $Q_{k-1}$ dois bits para a esquerda e concatenar o par de bits \texttt{01} nas duas posições menos significativas:
+\begin{equation}
+	T_k = (Q_{k-1} \ll 2) \mid 01_2
+	\label{eq:concatenacao}
+\end{equation}
+
+Paralelamente, o radicando $X$ é consumido da esquerda para a direita (do bit mais significativo para o menos significativo) em grupos de 2 bits por iteração, pois $(2^1)^2 = 2^2 = 4$. O resto parcial $A_k$ é atualizado deslocando-se o resto anterior dois bits à esquerda e inserindo os 2 bits mais significativos atuais de $X$:
+\begin{equation}
+	A_k = (A_{k-1} \ll 2) \mid X_{\text{MSB}[15:14]}
+	\label{eq:resto}
+\end{equation}
+
+Em seguida, calcula-se a diferença de teste $S_k = A_k - T_k$:
+\begin{itemize}
+	\item \textbf{Caso $S_k \ge 0$:} O resíduo $A_k$ comporta a subtração. O novo bit da raiz é $b_k = 1$, o resto parcial é atualizado ($A_k \leftarrow S_k$) e a raiz parcial passa a ser $Q_k = (Q_{k-1} \ll 1) \mid 1$.
+	\item \textbf{Caso $S_k < 0$:} O termo de teste excede o resíduo disponível. O novo bit da raiz é $b_k = 0$, o resto parcial anterior $A_k$ é preservado (caracterizando o método como \textit{restaurador}) e a raiz parcial recebe apenas o deslocamento $Q_k = (Q_{k-1} \ll 1)$. 
+\end{itemize}
+
+Mais detalhes acerca da demonstração matemática completa são dados em \cite{wiki_sqrt}.
+
+\subsection{Extensão para Ponto Fixo (Q16.0 para Q8.6)}
+Para uma entrada $X$ de 16 bits no formato inteiro Q16.0, as primeiras $8$ iterações consomem integralmente os $8$ pares de bits do radicando ($8 \times 2 = 16$ bits), produzindo os \textbf{8 bits da parte inteira} da raiz quadrada ($\lfloor\sqrt{X}\rfloor$).
+
+Ao término da 8ª iteração, o registrador de entrada encontra-se completamente zerado. Contudo, caso ainda exista resto não nulo em $A_8$, a execução de iterações adicionais continua deslocando pares de bits \texttt{00} para dentro de $A_k$. Matematicamente, realizar $F$ iterações extras após esgotar os bits de $X$ equivale a multiplicar o radicando original por $4^F = 2^{2F}$ e extrair a raiz inteira:
+\begin{equation}
+	Q_{8+F} = \left\lfloor \sqrt{X \cdot 2^{2F}} \right\rfloor = \left\lfloor 2^F \sqrt{X} \right\rfloor
+	\label{eq:escala}
+\end{equation}
+
+Como a implementação executa um total de $N = 14$ iterações ($8$ inteiras $+ 6$ fracionárias, com $F = 6$), o valor binário final armazenado no registrador de saída está escalonado por $2^6 = 64$, correspondendo diretamente à representação em ponto fixo \textbf{Q8.6}.
+
 
 \section{Funcionamento do Algoritmo}
-Em linhas gerais, o algoritmo consiste em subdividir o número binário em subgrupos de 2 dígitos. A cada iteração, cada um desses grupos irá gerar um único dígito como resposta. Como a base binária permite apenas 0 ou 1, o dígito seguinte é decidido através da diferença entre o cálculo restante e o valor previsto.
-
-Detalhes acerca da demonstração matemática, bem como outros exemplos, podem ser encontrados em \cite{wiki_sqrt}. O algoritmo abaixo generaliza o exemplo mostrado em \cite{projectf_sqrt}
+Em linhas gerais, o algoritmo consiste em subdividir o número binário em subgrupos de 2 dígitos. A cada iteração, cada um desses grupos irá gerar um único dígito como resposta. Como a base binária permite apenas 0 ou 1, o dígito seguinte é decidido através da diferença entre o cálculo restante e o valor previsto. O algoritmo abaixo generaliza o exemplo mostrado em \cite{projectf_sqrt}.
 \begin{algorithm}[htbp]
 \caption{Raiz quadrada inteira binária em ponto fixo}
 \label{alg:sqrt-registradores}
@@ -246,9 +290,36 @@ Para permitir uma maior amplitude de valores numéricos, utilizou-se 2 registrad
 
 O sistema final pressupõe uma entrada já quantizada em Q16.0. A fim de cobrir uma ampla faixa dos números inteiros, decidimos interpretar a entrada como um número de 16 bits, dos quais todos são parte inteira. Assim, o código é capaz de calcular a raiz de um número $n$ na forma: $\forall n \in \mathbb{Z}, n \in [0, 65535]$. 
 
-Além disso, a saída foi quantizada em Q8.6. O tamanho da parte inteira da saída, conforme mostrado no algoritmo \ref{alg:sqrt-registradores}, depende apenas do tamanho da entrada. A parte fracionária, para os casos de raízes não exatas, está relacionada com a quantidade de iterações realizadas após preenchimento da parte inteira.
+Além disso, a saída foi quantizada em Q8.6. O tamanho da parte inteira da saída, conforme mostrado no algoritmo \ref{alg:sqrt-registradores}, depende apenas do tamanho da entrada. A parte fracionária, para os casos de raízes não exatas, está relacionada com a quantidade de iterações realizadas após preenchimento da parte inteira. Um resumo dessas quantizações é dado abaixo na Tabela \ref{tab:limites}
+
+\begin{table}[htbp]
+	\caption{Especificações Numéricas de Entrada e Saída}
+	\label{tab:limites}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{3.5pt}
+	\begin{tabularx}{\columnwidth}{@{}Xcc@{}}
+		\toprule
+		\textbf{Parâmetro Técnico} & \textbf{Entrada (\texttt{INPUT})} & \textbf{Saída (\texttt{RESP})}   \\
+		\midrule
+		Notação Ponto Fixo         & Q16.0 (sem sinal)                 & Q8.6 (sem sinal)                 \\
+		Largura Registrador        & 16 bits (\texttt{R19:R18})        & 16 bits (\texttt{R21:R20})       \\
+		Bits Efetivos              & 16 bits ($[15:0]$)                & 14 bits ($[13:0]$)               \\
+		Bits Int. / Frac.          & 16 int / 0 frac                   & 8 int / 6 frac                   \\
+		Resolução (1 LSB)          & $2^0 = 1$                         & $2^{-6} = 0{,}015625$            \\
+		Valor Mínimo               & $0$ (\texttt{0x0000})             & $0{,}0$ (\texttt{0x0000})        \\
+		Valor Máximo               & $65535$ (\texttt{0xFFFF})         & $255{,}984375$ (\texttt{0x3FFF}) \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
 
 Como cada iteração gera um dígito, o preenchimento da parte fracionária foi feito até o limite do \textit{overflow} dos registradores intermediários do cálculo.
+
+Para converter o valor binário bruto $R_{\text{raw}}$ contido no registrador da resposta após a 14ª iteração para sua grandeza real estimada $\hat{y}$, divide-se o inteiro sem sinal por $2^6 = 64$:
+\begin{equation}
+	\hat{y} = \frac{R_{\text{raw}}}{64} = (\texttt{RESP\_HIGH} \ll 2) + \frac{\texttt{RESP\_LOW}}{64}
+	\label{eq:conversao}
+\end{equation}
 
 \subsection{Rotinas Principais}
 O código Assembly final tem um \textit{loop} com duas rotinas principais, a saber:
@@ -265,7 +336,6 @@ Em seguida, por meio de outro MOVW e subtrações sem e com carry (SUB e SBC), a
 
 O diagrama completo do sistema final pode ser encontrado em \cite{monteiro_sismicro}.
 
-\newpage
 \section{Análise dos Resultados}
 Para validar o funcionamento do código em Assembly, realizou-se um teste com alguns casos particulares:
 \begin{itemize}
@@ -274,7 +344,7 @@ Para validar o funcionamento do código em Assembly, realizou-se um teste com al
     \item Raízes Inexatas: Números que não possuem raízes inteiras.
 \end{itemize}
 
-A Tabela \ref{tabela_teste} traz o resultado de alguns desses casos, mostrando qual foi a saída gerada a partir de cada entrada.
+A Tabela \ref{tabela_teste} traz o resultado de alguns desses casos, mostrando qual foi a saída gerada a partir de cada entrada. A Tabela \ref{tab:erros} traz mais exemplos, com os erros associados.
 
 \begin{table}[htbp]
 \centering
@@ -292,22 +362,34 @@ A Tabela \ref{tabela_teste} traz o resultado de alguns desses casos, mostrando q
 \end{tabular}
 \end{table}
 
-Para os casos em questão, podemos perceber que o algoritmo cumpriu com o esperado. Para os casos em que a entrada possuía raiz inteira, o cálculo foi exato, sem qualquer erro envolvido. Para os casos onde a raiz não era exata, pudemos comprovar que o erro esteve sempre limitado ao menor valor passível de representação ($2^{-6} \approx 0,015625$).
+Para os casos em questão, podemos perceber que o algoritmo cumpriu com o esperado. Para os casos em que a entrada possuía raiz inteira, o cálculo foi exato, sem qualquer erro envolvido. Para os casos onde a raiz não era exata, pudemos validar que o erro esteve sempre limitado ao menor valor passível de representação ($2^{-6} \approx 0,015625$).
 
-Isto pode ser mostrado olhando para a entrada máxima possível no intervalo de representação. O valor é $(0\text{x}FFFF)_{16}  = (65535)_{10}$. A raiz então seria $\sqrt{65535} \approx 255,998047$. 
+Isto pode ser mostrado analisando as propriedades das operações aplicadas pelo algoritmo. Como ele interrompe a extração na 6ª casa fracionária binária sem etapa adicional de arredondamento, a operação realizada é equivalente à função piso (\textit{floor}) aplicada sobre a raiz escalonada:
+\begin{equation}
+	\hat{y}(X) = \frac{\lfloor 2^6 \sqrt{X} \rfloor}{2^6} = \frac{\lfloor 64\sqrt{X} \rfloor}{64}
+	\label{eq:floor}
+\end{equation}
 
-Seja $\delta$ o erro absoluto associado. Ficamos com:
-\begin{align*}
-    & \delta = 255,998047 - 255,984375 = 0.013672 \\
-    & \delta < 2^{-6} = 0,015625
-\end{align*}
+Pela desigualdade da função piso, sabe-se que $\lfloor 64\sqrt{X} \rfloor \le 64\sqrt{X} < \lfloor 64\sqrt{X} \rfloor + 1$. Dividindo todos os termos por $64$ e usando a Equação~\ref{eq:floor}, obtém-se:
+\begin{equation}
+	\hat{y}(X) \le \sqrt{X} < \hat{y}(X) + 2^{-6}
+	\label{eq:piso_div}
+\end{equation}
+Subtraindo $\sqrt{X}$ de todos os termos e multiplicando por $-1$, chega-se ao intervalo do erro $e(X) = \hat{y}(X) - \sqrt{X}$:
+\begin{align}
+	-2^{-6} &< \hat{y}(X) - \sqrt{X} \le 0 \nonumber \\
+	\Rightarrow\quad 0 &\le \sqrt{X} - \hat{y}(X) < 0{,}015625
+	\label{eq:cota_erro}
+\end{align}
 
-Conforme era esperado, já que não há ocorrência de \textit{overflow} no processo.
+
 
 \section{Conclusão}
-Este trabalho demonstrou sucesso na implementação de um algoritmo de baixo nível para um microcontrolador. A escolha do método do dígito por dígito se mostrou uma boa abordagem para a arquitetura do ATmega328, extraindo o melhor possível do método de ponto fixo. A adoção do ponto fixo permitiu não apenas processar completamente os inteiros de 16 bits (Q16.0), mas também garantir precisão fracionária na resposta (Q8.6), chegando no limite de \textit{overflow} dos registradores. Como mostrado nos testes de rastreamento, o controle de fluxo por meio da \textit{flag} de sinal do registrador de status e o mapeamento direto das variáveis para os registradores (R18 a R27) garantiram um \textit{datapath} enxuto. Pode-se concluir que o código desenvolvido em Assembly atende aos requisitos solicitados, oferecendo um tempo de execução curto e um baixo uso de memória.
+Este trabalho demonstrou sucesso na implementação de um algoritmo de baixo nível para um microcontrolador. A escolha do método do dígito por dígito se mostrou uma boa abordagem para a arquitetura do ATmega328, extraindo o melhor possível do método de ponto fixo. A adoção do ponto fixo permitiu não apenas processar completamente os inteiros de 16 bits (Q16.0), mas também garantir precisão fracionária na resposta (Q8.6), chegando no limite de \textit{overflow} dos registradores. Como mostrado nos testes de rastreamento, o controle de fluxo por meio da \textit{flag} de sinal do registrador de status e o mapeamento direto das variáveis para os registradores (R18 a R27) garantiram um bom desempenho. Pode-se concluir que o código desenvolvido em Assembly atende aos requisitos solicitados, oferecendo um tempo de execução curto e um baixo uso de memória.
 
-\appendix[Uso de Inteligência Artificial Generativa]
+\appendices
+
+\section{Uso de Inteligência Artificial Generativa}
 
 \subsection*{Declaração}
 A equipe declara que a IAG foi utilizada nas etapas descritas abaixo. O detalhamento de cada uso, incluindo os \textit{prompts} empregados, é apresentado a seguir.
@@ -315,10 +397,10 @@ A equipe declara que a IAG foi utilizada nas etapas descritas abaixo. O detalham
 \subsection*{Detalhamento}
 
 \usoIAG
-  {Generalização do código em Assembly}
+  {Demonstração Matemática do Algoritmo e Erros Associados}
   {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
-  {como esse código poderia ser escalado para lidar com números em uma faixa maior de representação? Por exemplo, em Q8.8?. Dê um direcionamento e ideias para uma implementação, sem enviar o código pronto.}
-  {O \textit{prompt} foi feito após já existir uma implementação funcional do algoritmo, porém para uma escala menor de representação, com apenas um registrador.}
+  {Demonstre matematicamente o funcionamento do algoritmo dígito por dígito em ponto fixo, considerando formatação Q16.0 na entrada e Q8.6 na saída. Prove também qual o limitante superior dos erros envolvidos}
+  {}
 
 \usoIAG
   {Formatação das referências bibliográficas}
@@ -344,6 +426,36 @@ A equipe declara que a IAG foi utilizada nas etapas descritas abaixo. O detalham
   {faça um template para que eu possa colocar essa seção como um anexo do arquivo já existente no latex no template IEEE Conference. Alguns campos para o prompt, indicação de onde foi usado e o modelo usado}
    {O \textit{prompt} incluía uma imagem com as orientações para a seção de IAG. Adaptado em relação à formatação.}
 
+\section{Tabela de Erros}
+\begin{table}[htbp]
+	\caption{Estimativa do Algoritmo (Q8.6) $\times$ Referência Real.}
+	\label{tab:erros}
+	\centering
+	\scriptsize
+	\setlength{\tabcolsep}{3pt}
+	\renewcommand{\arraystretch}{1.1}
+	\resizebox{\columnwidth}{!}{%
+	\begin{tabular}{rcrrrr}
+		\toprule
+		\makecell{\textbf{$X$}\\\textbf{(Q16.0)}} &
+		\makecell{\textbf{Hex}\\\textbf{(Q8.6)}} &
+		\makecell{\textbf{$\hat{y}$}\\\textbf{(Decimal)}} &
+		\makecell{\textbf{$\sqrt{X}$}\\\textbf{(Referência)}} &
+		\makecell{\textbf{$|e_{\mathrm{abs}}|$}} &
+		\makecell{\textbf{$|e_{\mathrm{rel}}|$}\\\textbf{(\%)}} \\
+		\midrule
+		$0$     & \texttt{0x0000} & $0{,}000000$   & $0{,}000000$   & $0{,}000000$ & $0{,}000$ \\
+		$2$     & \texttt{0x005A} & $1{,}406250$   & $1{,}414214$   & $0{,}007964$ & $0{,}563$ \\
+		$10$    & \texttt{0x00CA} & $3{,}156250$   & $3{,}162278$   & $0{,}006028$ & $0{,}191$ \\
+		$121$   & \texttt{0x02C0} & $11{,}000000$  & $11{,}000000$  & $0{,}000000$ & $0{,}000$ \\
+		$255$   & \texttt{0x03FD} & $15{,}953125$  & $15{,}968719$  & $0{,}015594$ & $0{,}098$ \\
+		$1000$  & \texttt{0x07E7} & $31{,}609375$  & $31{,}622777$  & $0{,}013402$ & $0{,}042$ \\
+		$10000$ & \texttt{0x1900} & $100{,}000000$ & $100{,}000000$ & $0{,}000000$ & $0{,}000$ \\
+		$16383$ & \texttt{0x1FFF} & $127{,}984375$ & $127{,}996094$ & $0{,}011719$ & $0{,}009$ \\
+		\bottomrule
+	\end{tabular}%
+	}
+\end{table}
 
 \begin{thebibliography}{1}
 \bibitem{monteiro_sismicro}
@@ -355,8 +467,7 @@ A equipe declara que a IAG foi utilizada nas etapas descritas abaixo. O detalham
 \bibitem{projectf_sqrt}
 W. Green, ``Square root in Verilog,'' \emph{Project F}, 22 dez. 2020. [Online]. Disponível em: \url{https://projectf.io/posts/square-root-in-verilog/}. Acesso em: 18 out. 2026.
 
-\bibitem{morris_goldschmidt}
-M. Morris, ``Computing fixed-point square roots and their reciprocals using Goldschmidt algorithm,'' \emph{FPGARelated.com}, 14 jun. 2020. [Online]. Disponível em: \url{https://www.fpgarelated.com/showarticle/1347.php}. Acesso em: 18 out. 2026.
+\bibitem{ref_atmel} Atmel Corporation, \textit{ATmega328P 8-bit AVR Microcontroller with 32K Bytes In-System Programmable Flash Datasheet}, Rev. 7810D-AVR-01/15, 2015.
 
 \bibitem{ncot_fixedpoint}
 NCOT Technology, ``Fixed point maths explained - Retro programming,'' YouTube, 14 nov. 2021. [Vídeo]. Disponível em: \url{https://www.youtube.com/watch?v=Is67DfCdvcE}. Acesso em: 18 out. 2026.
