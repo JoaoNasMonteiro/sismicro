@@ -13,4 +13,6 @@ typedef struct pacote {
   uint8_t flags;      // top 2 bits para flag, LF00 0000
 } pacote_t;
 
+// TODO: adicionar as assnaturas das funções aqui
+
 #endif /* end of include guard: USART_H */

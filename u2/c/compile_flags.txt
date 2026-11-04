@@ -1,0 +1,3 @@
+--target=avr
+-mmcu=attmega328p
+-l/usr/lib/avr/include
