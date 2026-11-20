@@ -55,6 +55,15 @@ int main(void) {
         contador_falha = 0;
       }
 
+      /* Guarda a leitura atual para a próxima comparação */
+      nivel_anterior = nivel;
+
+      /* ── Montagem e Envio do Pacote Serial ──
+       * Flags (LF00 0000):
+       *   Bit 7 (L): 1 = Bomba ligada, 0 = desligada
+       *   Bit 6 (F): 1 = Falha detectada (5s sem aumento de nível)
+       *   Bit 5 (M): 1 = Modo manual ativo, 0 = automático
+       */
       uint8_t flags = 0;
       if (bomba_ligada) {
         flags |= (1 << 7);
@@ -63,10 +72,14 @@ int main(void) {
         flags |= (1 << 6);
       }
 
-      usart_transmit(nivel);
-      usart_transmit(limite_ligar);
-      usart_transmit(limite_desligar);
-      usart_transmit(flags);
+      /* Envia pacote de 4 bytes via USART */
+      usart_enviar_pacote(nivel, limite_ligar, limite_desligar, flags);
+    }
+
+    if (flag_pacote_recebido) {
+      flag_pacote_recebido = 0;
+      limite_ligar = pacote_rx.ligar;
+      limite_desligar = pacote_rx.amostragem;
     }
   }
   return 0;

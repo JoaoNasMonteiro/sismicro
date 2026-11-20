@@ -5,3 +5,8 @@
 *.synctex.gz
 *.fdb_latexmk
 *.out
+
+# Arquivos de compilação
+*.o
+*.elf
+*.hex
