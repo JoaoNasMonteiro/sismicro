@@ -14,14 +14,17 @@
 \usepackage{textcomp}
 \usepackage{accsupp}
 \usepackage[T1]{fontenc}
-\usepackage{amsmath}            
-\usepackage{float}              
-\usepackage{algorithm}           
-\usepackage{algpseudocode}       
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
 % --- Anexo de uso de IAG ---
 \newcounter{usoiag}
 \newcommand{\usoIAG}[4]{%
@@ -35,15 +38,17 @@
 }
 
 \floatname{algorithm}{Algoritmo}
+\renewcommand{\lstlistingname}{Listagem}
 \algrenewcommand\algorithmicrequire{\textbf{Entrada:}}
 \algrenewcommand\algorithmicensure{\textbf{Saída:}}
 \algrenewcommand\algorithmicfor{\textbf{para}}
+\algrenewcommand\algorithmicwhile{\textbf{enquanto}}
 \algrenewcommand\algorithmicdo{\textbf{faça}}
 \algrenewcommand\algorithmicif{\textbf{se}}
 \algrenewcommand\algorithmicthen{\textbf{então}}
 \algrenewcommand\algorithmicelse{\textbf{senão}}
+\algrenewcommand\algorithmicend{\textbf{fim}}
 \algrenewcommand\algorithmicreturn{\textbf{retorne}}
-
 
 \definecolor{codebg}{RGB}{245, 245, 245}
 \definecolor{codegreen}{RGB}{0, 128, 0}
@@ -51,9 +56,7 @@
 \definecolor{codepurple}{RGB}{128, 0, 128}
 \definecolor{codeblue}{RGB}{0, 0, 180}
 
-
 \newcommand*{\nonselectablenumber}[1]{{\BeginAccSupp{ActualText={}}#1\EndAccSupp{}}}
-
 
 \lstdefinestyle{codigo}{
     backgroundcolor=\color{codebg},
@@ -68,21 +71,24 @@
     nolol=false,
     keepspaces=true,
     numbers=right,
-    numbersep=5pt,
+    numbersep=3pt,
     showspaces=false,
     showstringspaces=false,
     showtabs=false,
-    tabsize=3,
+    tabsize=2,
     frame=single,
     framerule=0.5pt,
     rulecolor=\color{codegray},
     extendedchars=true,
     literate=
     {á}{{\'a}}1 {ã}{{\~a}}1 {â}{{\^a}}1 {à}{{\`a}}1
+    {Á}{{\'A}}1 {Ã}{{\~A}}1 {Â}{{\^A}}1 {À}{{\`A}}1
     {é}{{\'e}}1 {ê}{{\^e}}1 {è}{{\`e}}1
-    {í}{{\'i}}1 {î}{{\^i}}1 {ì}{{\`i}}1
+    {É}{{\'E}}1 {Ê}{{\^E}}1 {È}{{\`E}}1
+    {í}{{\'i}}1 {î}{{\^i}}1 {ì}{{\`i}}1 {Í}{{\'I}}1
     {ó}{{\'o}}1 {ô}{{\^o}}1 {õ}{{\~o}}1 {ò}{{\`o}}1
-    {ú}{{\'u}}1 {ü}{{\"u}}1 {ù}{{\`u}}1
+    {Ó}{{\'O}}1 {Ô}{{\^O}}1 {Õ}{{\~O}}1 {Ò}{{\`O}}1
+    {ú}{{\'u}}1 {ü}{{\"u}}1 {ù}{{\`u}}1 {Ú}{{\'U}}1
     {ç}{{\c{c}}}1 {Ç}{{\c{C}}}1
 }
 
@@ -90,47 +96,368 @@
 
 \begin{document}
 
-\title{Controle Inteligente de Nível de Água em um Reservatório através com o Microcontrolador ATmega328P}
+\title{Sistema de Monitoramento e Controle de Nível de Água em Reservatório no ATmega328P}
+
 \author{
-\IEEEauthorblockN{Gabriel Luduvice Nunes Wolfovitch, João Pedro Nascimento Monteiro e \\
-João Vítor de Araújo Costa de Oliveira}
-\IEEEauthorblockA{\textit{Departamento de Engenharia Elétrica e Computação (DEEC)}\\
-\textit{Universidade Federal da Bahia (UFBA)}\\
-Salvador, Brasil\\
-\{gabrielwolfovitch, joaovaco, monteirojoao\}@ufba.br
-}
+	\IEEEauthorblockN{Gabriel Luduvice Nunes Wolfovitch, João Pedro Nascimento Monteiro e \\
+		João Vítor de Araújo Costa de Oliveira}
+	\IEEEauthorblockA{\textit{Departamento de Engenharia Elétrica e Computação (DEEC)}\\
+		\textit{Universidade Federal da Bahia (UFBA)}\\
+		Salvador, Brasil\\
+		\{gabrielwolfovitch, joaovaco, monteirojoao\}@ufba.br
+	}
 }
 
 \maketitle
 
 \begin{abstract}
-This document is a model and instructions for \LaTeX.
-This and the IEEEtran.cls file define the components of your paper [title, text, heads, etc.]. *CRITICAL: Do Not Use Symbols, Special Characters, Footnotes, 
-or Math in Paper Title or Abstract.
+	O problema proposto envolve o desenvolvimento de um sistema embarcado no microcontrolador ATmega328P para monitorar o nível de água de um reservatório, controlar o acionamento de uma bomba e comunicar-se com um computador via interface serial. A solução foi implementada em linguagem C pura com acesso direto aos registradores dos periféricos internos, estruturada em torno de um laço principal coordenado por interrupções. O Timer1 em modo CTC gera a base temporal de 1 segundo para disparar leituras de 8 bits do conversor analógico-digital, enquanto a lógica principal aplica controle liga-desliga com histerese configurável e detecção de falhas por estagnação do nível em 5 ciclos consecutivos. A comunicação bidirecional utiliza a USART0 a 9600 bps com pacotes binários de 4 bytes interpretados por um console supervisório em Python. O firmware compilado ocupa 768 bytes de memória Flash e 18 bytes de SRAM, com tempo combinado de conversão e transmissão inferior a 5 milissegundos por ciclo.
 \end{abstract}
 
 \begin{IEEEkeywords}
-component, formatting, style, styling, insert.
+	ATmega328P, Controle de Nível, Histerese, Interrupções, USART.
 \end{IEEEkeywords}
 
 \section{Introdução}
-This document is a model and instructions for \LaTeX.
-Please observe the conference page limits. For more information about how to become an IEEE Conference author or how to write your paper, please visit   IEEE Conference Author Center website: https://conferences.ieeeauthorcenter.ieee.org/.
+O controle manual de bombas elétricas em reservatórios está sujeito a transbordamentos, falta de abastecimento e operação a seco. Automatizar esse processo requer um sistema capaz de medir continuamente o nível de água, acionar a bomba segundo limites definidos, sinalizar condições anormais e permitir supervisão remota por um operador.
 
-\section{Parametrização do Problema}
-% Seção para descrever os parâmetros escolhidos, como a quantidade de modos amostrados, a capacidade do tanque, dentre outros.
+Neste trabalho, o sistema foi desenvolvido para o microcontrolador ATmega328P \cite{ref_atmel}, operando a $16\text{ MHz}$ e programado em linguagem C pura com manipulação direta dos registradores dos periféricos, sem o uso de bibliotecas de abstração de alto nível. A solução precisa coordenar temporização periódica, conversão analógico-digital, lógica de controle e comunicação serial sem que uma tarefa bloqueie a resposta das demais.
 
-\section{Módulos Utilizados}
-%Seção para descrever cada uma das implementações feitas, como o adc, o temporizador e a usart.
+Para atender a esses requisitos, adotou-se uma arquitetura modular orientada a interrupções, na qual as rotinas de serviço de interrupção (ISRs) executam apenas o registro de eventos e dados em variáveis voláteis, delegando o processamento de controle e o envio de telemetria ao laço principal. O código-fonte do firmware e do console supervisório está disponível em \cite{monteiro_sismicro_u2}.
 
+\section{Estratégia Adotada e Funcionamento}
+A organização do firmware foi definida para manter a execução previsível e com baixo custo computacional. Em vez de utilizar esperas ocupadas para temporização ou formatação de texto no microcontrolador, toda a coordenação entre periféricos baseia-se em três mecanismos integrados:
+\begin{itemize}
+	\item \textbf{Base temporal por hardware:} o Timer1 em modo \textit{Clear Timer on Compare Match} (CTC) dispara as amostragens periodicamente sem atrasos acumulados de software;
+	\item \textbf{Aquisição em 8 bits:} o conversor analógico-digital (ADC) opera com alinhamento à esquerda, fornecendo diretamente um inteiro de $0$ a $255$ compatível com a arquitetura de 8 bits;
+	\item \textbf{Protocolo binário fixo:} a comunicação pela interface serial assíncrona (USART) utiliza quadros compactos de 4 bytes para telemetria e atualização de parâmetros.
+\end{itemize}
 
-\subsection{Conversor Analógico-Digital (ADC)}
-\subsection{Comunicação Serial (USART)}
-\subsection{Temporizador}
+\subsection{Aquisição Analógica e Representação do Nível}
+O sistema pressupõe um sensor analógico de nível (como transdutores potenciométricos de boia ou sensores de pressão hidrostática) condicionado para saída de tensão linear entre $0\text{ V}$ (reservatório vazio) e $5\text{ V}$ (reservatório cheio), conectado ao canal \texttt{ADC0}. Embora o ADC do ATmega328P possua resolução nativa de 10 bits, ativou-se o alinhamento à esquerda (\texttt{ADLAR = 1}), permitindo ler apenas os 8 bits mais significativos no registrador \texttt{ADCH} e descartar os 2 bits menos significativos em \texttt{ADCL}.
 
-\section{Análise dos Resultados }
+Com referência $V_{\text{ref}} = AV_{\text{CC}} = 5\text{ V}$ e capacidade nominal fixada em $255\text{ L}$, o código digital $D \in [0, 255]$ mapeia diretamente o volume estimado $V_{\text{est}}$ e o nível percentual $N_{\%}$ exibido no console:
+\begin{equation}
+	V_{\text{est}} = D\ \text{[L]}, \qquad N_{\%} = \frac{D}{255}\cdot 100\%.
+	\label{eq:nivel}
+\end{equation}
+O passo de quantização correspondente em tensão é $q_V = 5/256 \approx 19{,}53\text{ mV}$, equivalente a $1\text{ L}$ por bit menos significativo (LSB), ou cerca de $0{,}392\%/\text{LSB}$. Essa representação elimina a necessidade de aritmética em ponto flutuante e de manipulação de inteiros de 16 bits na malha de controle.
+
+\subsection{Controle com Histerese e Detecção de Falhas}
+Um controlador liga-desliga com limiar único tende a chavear a bomba repetidamente diante de pequenas variações ou ruído na leitura próxima ao ponto de corte. Para evitar esse comportamento, implementou-se controle com histerese definido pelos limiares inteiros $L_{\text{on}}$ (\texttt{limite\_ligar}) e $L_{\text{off}}$ (\texttt{limite\_desligar}), com $0 \le L_{\text{on}} < L_{\text{off}} \le 255$. Sendo $u[k] \in \{0, 1\}$ o estado da bomba na amostra $k$ ($1$ para ligada e $0$ para desligada), a regra de atualização é dada por:
+\begin{equation}
+	u[k] =
+	\begin{cases}
+		1,      & \text{se } D[k] \le L_{\text{on}},                \\
+		0,      & \text{se } D[k] \ge L_{\text{off}},               \\
+		u[k-1], & \text{se } L_{\text{on}} < D[k] < L_{\text{off}}.
+	\end{cases}
+	\label{eq:histerese}
+\end{equation}
+
+Na inicialização, os limiares são definidos em $L_{\text{on}} = 51$ ($20{,}0\%$) e $L_{\text{off}} = 204$ ($80{,}0\%$), formando uma banda morta de $153\text{ L}$ ($60{,}0\%$), conforme ilustrado na Fig.~\ref{fig:histerese}. Ambos os valores podem ser alterados em tempo de execução pelo operador.
+
+\begin{figure}[htbp]
+	\centering
+	\begin{tikzpicture}[scale=0.86, >=Stealth, font=\footnotesize]
+		% Eixos
+		\draw[->] (0,0) -- (6.3,0) node[right] {Nível $D$ (L)};
+		\draw[->] (0,0) -- (0,2.35) node[above] {Estado da bomba $u$};
+
+		% Marcas nos eixos
+		\draw (1.3, 0.08) -- (1.3, -0.08) node[below] {$51$};
+		\draw (4.7, 0.08) -- (4.7, -0.08) node[below] {$204$};
+		\draw (5.8, 0.08) -- (5.8, -0.08) node[below] {$255$};
+		\draw (0.08, 1.75) -- (-0.08, 1.75) node[left] {1 (Lig.)};
+		\node[left] at (-0.08, 0.15) {0 (Desl.)};
+
+		% Região de histerese
+		\fill[blue!8] (1.3,0) rectangle (4.7,1.75);
+		\node[text=blue!60!black, align=center] at (3.0, 0.88) {\scriptsize Banda de\\ \scriptsize Histerese};
+
+		% Ramo superior (bomba ligada)
+		\draw[very thick, blue!75!black] (0, 1.75) -- (4.7, 1.75);
+		\draw[very thick, blue!75!black, ->] (2.4, 1.75) -- (3.4, 1.75);
+		\draw[very thick, blue!75!black, ->] (4.7, 1.75) -- (4.7, 0.06);
+
+		% Ramo inferior (bomba desligada)
+		\draw[very thick, red!75!black] (5.8, 0.06) -- (1.3, 0.06);
+		\draw[very thick, red!75!black, ->] (3.6, 0.06) -- (2.5, 0.06);
+		\draw[very thick, red!75!black, ->] (1.3, 0.06) -- (1.3, 1.75);
+	\end{tikzpicture}
+	\caption{Curva característica do controle liga-desliga com histerese para os limiares padrão ($L_{\text{on}} = 51$, $L_{\text{off}} = 204$).}
+	\label{fig:histerese}
+\end{figure}
+
+Para identificar falhas no abastecimento (como bomba ligada sem água na fonte, vazamento acentuado ou desconexão do sensor), mantém-se o contador \texttt{contador\_falha} ($c_f[k]$), atualizado a cada nova leitura do ADC segundo:
+\begin{equation}
+	c_f[k] =
+	\begin{cases}
+		c_f[k\!-\!1] + 1, & u[k] = 1 \text{ e } D[k] \le D[k\!-\!1], \\
+		0,                & \text{caso contrário.}
+	\end{cases}
+	\label{eq:falha}
+\end{equation}
+Quando $c_f[k] \ge 5$, o firmware sinaliza falha no pacote de telemetria. Com taxa de amostragem de $1\text{ Hz}$, isso corresponde a 5 ciclos consecutivos ($5\text{ s}$) com a bomba acionada sem elevação do nível. O contador retorna imediatamente a zero assim que $D[k] > D[k-1]$ ou quando a bomba é desligada.
+
+\subsection{Coordenação por Interrupções e Protocolo Serial}
+Para evitar bloqueios entre a aquisição e a recepção de comandos, cada evento assíncrono é tratado por uma ISR curta que altera apenas variáveis declaradas como \texttt{volatile}, impedindo otimizações indevidas pelo compilador. O laço principal consulta essas \textit{flags} e executa o controle, o envio de telemetria e a aplicação de novos parâmetros.
+
+Na comunicação serial, adotou-se a estrutura binária fixa \texttt{pacote\_t} de 4 bytes (\texttt{nivel}, \texttt{ligar}, \texttt{amostragem} e \texttt{flags}), trafegada nos dois sentidos. O byte \texttt{flags} segue o formato \texttt{LF00 0000}, no qual o bit 7 (\texttt{L}) indica o estado da bomba e o bit 6 (\texttt{F}) indica condição de falha, mantendo os 6 bits inferiores em zero. Na implementação final, o campo \texttt{amostragem} — previsto inicialmente nas anotações do projeto para seleção de modos de taxa de amostragem — foi reaproveitado para transportar o limite superior $L_{\text{off}}$.
+
+\section{Funcionamento do Algoritmo}
+Em linhas gerais, o sistema opera em um ciclo contínuo disparado pelo Timer1: a cada segundo, o temporizador inicia uma conversão do ADC; ao concluir a conversão, o ADC disponibiliza a amostra ao laço principal, que atualiza a bomba, verifica a condição de falha e envia o pacote de telemetria pela USART0. Em paralelo, bytes recebidos pela USART0 são acumulados por interrupção e aplicados assim que um quadro de 4 bytes é completado. A Fig.~\ref{fig:arquitetura} ilustra o fluxo entre os módulos internos e externos, e o Algoritmo~\ref{alg:controle} resume a execução completa.
+
+\begin{figure}[htbp]
+	\centering
+	\resizebox{\columnwidth}{!}{%
+		\begin{tikzpicture}[
+				>=Stealth,
+				font=\scriptsize,
+				box/.style={draw, rounded corners=2pt, minimum height=0.72cm, align=center, fill=blue!6},
+				ext/.style={draw, rounded corners=2pt, minimum height=0.72cm, align=center, fill=gray!12},
+				ctrl/.style={draw, rounded corners=2pt, minimum height=0.8cm, align=center, fill=green!10}
+			]
+			% Blocos internos do MCU
+			\node[box, minimum width=2.05cm] (timer) at (0, 1.65) {\textbf{Timer1 (CTC)}\\1 Hz (\texttt{OCR1A})};
+			\node[box, minimum width=2.05cm] (adc)   at (0, 0.25) {\textbf{ADC (8 bits)}\\PC0 / \texttt{ADCH}};
+			\node[ctrl, minimum width=2.3cm] (main)  at (3.65, 0.95) {\textbf{Laço Principal}\\Histerese + Falha};
+			\node[box, minimum width=2.3cm]  (usart) at (3.65, -0.55) {\textbf{USART0}\\9600 bps, 8N1};
+
+			% Contorno do ATmega328P
+			\node[draw, dashed, rounded corners=4pt, inner sep=7pt, fit=(timer)(adc)(main)(usart),
+				label={[font=\scriptsize\bfseries]above:ATmega328P (16 MHz)}] (mcu) {};
+
+			% Blocos externos
+			\node[ext, minimum width=1.6cm] (sensor) at (-2.65, 0.25) {Sensor\\Analógico\\(0--5 V)};
+			\node[ext, minimum width=1.6cm] (bomba)  at (6.8, 0.95)   {Acionamento\\da Bomba\\(\texttt{PB0})};
+			\node[ext, minimum width=1.6cm] (pc)     at (6.8, -0.55)  {Console\\Python\\(\texttt{console.py})};
+
+			% Conexões
+			\draw[->] (timer) -- node[right, font=\tiny] {ISR: \texttt{ADSC}} (adc);
+			\draw[->] (sensor) -- (adc);
+			\draw[->] (adc.east) -- ++(0.35,0) |- node[pos=0.73, above, font=\tiny] {ISR: \texttt{ADCH}} (main.west);
+			\draw[->] (main) -- (bomba);
+			\draw[<->] (main) -- node[right, font=\tiny] {TX / RX ISR} (usart);
+			\draw[<->] (usart) -- node[pos=0.58, above, font=\tiny] {4 bytes} (pc);
+		\end{tikzpicture}%
+	}
+	\caption{Arquitetura do sistema embarcado e fluxo de dados entre os periféricos do ATmega328P e os elementos externos.}
+	\label{fig:arquitetura}
+\end{figure}
+
+\begin{algorithm}[htbp]
+	\caption{Monitoramento e controle orientado a interrupções}
+	\label{alg:controle}
+	\begin{algorithmic}[1]
+		\Require Leitura analógica $D \in [0,255]$ e quadros RX de $4$ bytes
+		\Ensure Nível lógico em \texttt{PB0} e quadros TX de $4$ bytes
+
+		\State Configurar ADC, Timer1 ($1\text{ Hz}$), USART0 ($9600\text{ bps}$) e \texttt{PB0} em nível baixo; definir $L_{\text{on}} \gets 51$, $L_{\text{off}} \gets 204$, $u \gets 0$, $D_{\text{ant}} \gets 0$, $c_f \gets 0$; habilitar interrupções (\texttt{sei()}).
+		\State \textit{[ISR Timer1 COMPA]}: $\text{flag\_tempo} \gets 1$; ativar \texttt{ADSC}.
+		\State \textit{[ISR ADC]}: $\text{nivel\_atual} \gets \text{ADCH}$; $\text{flag\_leitura} \gets 1$.
+		\State \textit{[ISR USART RX]}: ler \texttt{UDR0}; se $\text{flag\_rx} = 0$, armazenar em \texttt{rx\_buffer}; ao completar $4$ bytes, preencher \texttt{pacote\_rx} e fazer $\text{flag\_rx} \gets 1$.
+
+		\While{verdadeiro}
+		\If{$\text{flag\_tempo} = 1$}
+		\State $\text{flag\_tempo} \gets 0$
+		\EndIf
+		\If{$\text{flag\_leitura} = 1$}
+		\State $\text{flag\_leitura} \gets 0$; $D \gets \text{nivel\_atual}$
+		\If{$D \le L_{\text{on}}$}
+		\State \texttt{PB0} $\gets 1$; $u \gets 1$
+		\ElsIf{$D \ge L_{\text{off}}$}
+		\State \texttt{PB0} $\gets 0$; $u \gets 0$
+		\EndIf
+		\If{$u = 1$ \textbf{e} $D \le D_{\text{ant}}$}
+		\State $c_f \gets c_f + 1$
+		\Else
+		\State $c_f \gets 0$
+		\EndIf
+		\State $D_{\text{ant}} \gets D$
+		\State $\text{flags} \gets (u \ll 7) \mid ((c_f \ge 5) \ll 6)$
+		\State enviar pacote USART $(D, L_{\text{on}}, L_{\text{off}}, \text{flags})$
+		\EndIf
+		\If{$\text{flag\_rx} = 1$}
+		\State $\text{flag\_rx} \gets 0$
+		\State $L_{\text{on}} \gets \text{pacote\_rx.ligar}$
+		\State $L_{\text{off}} \gets \text{pacote\_rx.amostragem}$
+		\EndIf
+		\EndWhile
+	\end{algorithmic}
+\end{algorithm}
+
+\section{Descrição do Sistema Final}
+O firmware foi dividido em quatro arquivos-fonte em linguagem C (\texttt{temporizador.c}, \texttt{adc.c}, \texttt{usart.c} e \texttt{main.c}) com seus cabeçalhos correspondentes, compilados com \texttt{avr-gcc} e \texttt{avr-libc} \cite{avr_libc}. A supervisão no computador é realizada pelo script \texttt{console.py}. A seguir, detalha-se a implementação de cada módulo.
+
+\subsection{Módulo Temporizador}
+O arquivo \texttt{temporizador.c} configura o Timer1 (16 bits) em modo CTC por meio de \texttt{TCCR1A = 0} e \texttt{WGM12 = 1} em \texttt{TCCR1B}. Com oscilador de $f_{\text{CPU}} = 16\text{ MHz}$ e \textit{prescaler} $N = 1024$ (\texttt{CS12 = 1}, \texttt{CS10 = 1}), a frequência de contagem de \texttt{TCNT1} é:
+\begin{equation}
+	f_{\text{tick}} = \frac{f_{\text{CPU}}}{N} = \frac{16{.}000{.}000}{1024} = 15{.}625\text{ Hz}.
+	\label{eq:timer_freq}
+\end{equation}
+
+Para obter interrupções com período exato $T_s = 1{,}000\text{ s}$ ($f_{\text{int}} = 1\text{ Hz}$), o registrador de comparação é carregado com:
+\begin{equation}
+	\text{OCR1A} = \frac{f_{\text{tick}}}{f_{\text{int}}} - 1 = 15{.}624.
+	\label{eq:ocr1a}
+\end{equation}
+Com \texttt{OCIE1A = 1} em \texttt{TIMSK1}, o hardware zera \texttt{TCNT1} automaticamente ao atingir \texttt{OCR1A} e executa \texttt{ISR(TIMER1\_COMPA\_vect)}, que ativa \texttt{flag\_tempo = 1} e chama \texttt{adc\_iniciar\_conversao()}.
+
+\subsection{Módulo Conversor Analógico-Digital}
+O arquivo \texttt{adc.c} configura o canal \texttt{ADC0} (pino \texttt{PC0}) com referência em $AV_{\text{CC}}$ e resultado alinhado à esquerda escrevendo \texttt{ADMUX = (1 <{<} REFS0) | (1 <{<} ADLAR)}. Conforme a folha de dados do ATmega328P \cite{ref_atmel}, o relógio do ADC deve permanecer entre $50\text{ kHz}$ e $200\text{ kHz}$ para manter a precisão nominal; por isso, configurou-se o \textit{prescaler} em $128$ (\texttt{ADPS2:0 = 111} em \texttt{ADCSRA}), resultando em:
+\begin{equation}
+	f_{\text{ADC}} = \frac{16\text{ MHz}}{128} = 125\text{ kHz}.
+	\label{eq:adc_clk}
+\end{equation}
+
+Com \texttt{ADEN = 1} e \texttt{ADIE = 1}, cada escrita no bit \texttt{ADSC} executada pela função \texttt{adc\_iniciar\_conversao()} dispara uma conversão única. Ao finalizar, \texttt{ISR(ADC\_vect)} copia \texttt{ADCH} para a variável volátil \texttt{nivel\_atual} e sinaliza \texttt{flag\_leitura\_pronta = 1}.
+
+\subsection{Módulo de Comunicação Serial}
+O arquivo \texttt{usart.c} configura o periférico \textbf{USART0} a $9600\text{ bps}$ no formato 8N1 (8 bits de dados, sem paridade e 1 bit de parada). As macros de \texttt{<util/setbaud.h>} calculam em tempo de compilação \texttt{UBRR0 = 103} com \texttt{USE\_2X = 0} (\texttt{U2X0 = 0} em \texttt{UCSR0A}), produzindo taxa efetiva de $9615{,}38\text{ bps}$ (erro de $+0{,}16\%$, inferior à tolerância padrão de $\pm 2\%$). O registrador \texttt{UCSR0B} habilita transmissão (\texttt{TXEN0}), recepção (\texttt{RXEN0}) e interrupção de recepção (\texttt{RXCIE0}), enquanto \texttt{UCSR0C} define quadros de 8 bits (\texttt{UCSZ01 = 1}, \texttt{UCSZ00 = 1}).
+
+Na transmissão, \texttt{usart\_transmit()} verifica a \textit{flag} \texttt{UDRE0} antes de escrever cada byte em \texttt{UDR0}, sendo chamada quatro vezes por \texttt{usart\_enviar\_pacote()}. Na recepção, \texttt{ISR(USART\_RX\_vect)} lê \texttt{UDR0} imediatamente para limpar a \textit{flag} de interrupção e acumula os bytes em \texttt{rx\_buffer[4]}. Ao completar 4 bytes, os campos são copiados para \texttt{pacote\_rx}, o índice é zerado e \texttt{flag\_pacote\_recebido} é ativada. Caso o pacote anterior ainda não tenha sido consumido pelo laço principal, novos bytes são descartados para evitar sobrescrita concorrente.
+
+\subsection{Rotina Principal e Acionamento da Bomba}
+O arquivo \texttt{main.c} configura o pino de entrada e saída de propósito geral (GPIO) \texttt{PB0} como saída em nível lógico baixo via \texttt{DDRB} e \texttt{PORTB}, inicializa os três módulos periféricos, habilita as interrupções globais com \texttt{sei()} e executa o laço principal apresentado na Listagem~\ref{lst:main_loop}. Um resumo das configurações adotadas no hardware consta na Tabela~\ref{tab:especificacoes}.
+
+\begin{lstlisting}[language=C, float=htbp, caption={Laço principal de controle, detecção de falhas e recepção em \texttt{main.c}.}, label={lst:main_loop}]
+while (1) {
+  if (flag_tempo) {
+    flag_tempo = 0;
+  }
+
+  if (flag_leitura_pronta) {
+    flag_leitura_pronta = 0;
+    uint8_t nivel = nivel_atual;
+
+    if (nivel <= limite_ligar) {
+      bomba_ligar();
+    } else if (nivel >= limite_desligar) {
+      bomba_desligar();
+    }
+
+    if (bomba_ligada && nivel <= nivel_anterior) {
+      contador_falha++;
+    } else {
+      contador_falha = 0;
+    }
+    nivel_anterior = nivel;
+
+    uint8_t flags = 0;
+    if (bomba_ligada) {
+      flags |= (1 << 7);
+    }
+    if (contador_falha >= 5) {
+      flags |= (1 << 6);
+    }
+
+    usart_enviar_pacote(nivel, limite_ligar,
+                        limite_desligar, flags);
+  }
+
+  if (flag_pacote_recebido) {
+    flag_pacote_recebido = 0;
+    limite_ligar = pacote_rx.ligar;
+    limite_desligar = pacote_rx.amostragem;
+  }
+}
+\end{lstlisting}
+
+\begin{table}[htbp]
+	\caption{Especificações Técnicas e Parâmetros do Firmware}
+	\label{tab:especificacoes}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{3.5pt}
+	\begin{tabularx}{\columnwidth}{@{}lX@{}}
+		\toprule
+		\textbf{Parâmetro} & \textbf{Configuração Implementada}                                                 \\
+		\midrule
+		Microcontrolador   & ATmega328P @ $16\text{ MHz}$ (\texttt{avr-gcc}, C11, \texttt{-Os})                 \\
+		Entrada analógica  & Canal \texttt{ADC0} (pino \texttt{PC0}), $0$--$5\text{ V}$, ref. $AV_{\text{CC}}$  \\
+		Resolução efetiva  & 8 bits (\texttt{ADLAR = 1}), $0$--$255$ ($1\text{ L/LSB}$, $19{,}53\text{ mV}$)    \\
+		Clock do ADC       & $125\text{ kHz}$ (\textit{prescaler} $128$)                                        \\
+		Base temporal      & Timer1 CTC, \textit{prescaler} $1024$, \texttt{OCR1A} $= 15{.}624$ ($1\text{ Hz}$) \\
+		Saída da bomba     & Pino digital \texttt{PB0} (nível alto = ligada)                                    \\
+		Limiares padrão    & $L_{\text{on}} = 51$ ($20{,}0\%$), $L_{\text{off}} = 204$ ($80{,}0\%$)             \\
+		Critério de falha  & $c_f \ge 5$ amostras com $u = 1$ e $D[k] \le D[k-1]$                               \\
+		Interface serial   & USART0, $9600\text{ bps}$, 8N1, quadro de 4 bytes                                  \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\subsection{Console Supervisório}
+No computador, o arquivo \texttt{console.py} implementa a interface de supervisão em Python~3 utilizando \texttt{pySerial} \cite{pyserial_docs} e \texttt{threading}. Ao abrir a porta serial, o programa aguarda $1{,}0\text{ s}$ para estabilização após o reinício por DTR e limpa os \textit{buffers} de entrada e saída.
+
+Uma \textit{thread} em segundo plano acumula os bytes recebidos e aplica realinhamento de quadro antes de decodificar cada pacote: uma janela de 4 bytes só é aceita quando \texttt{(buffer[3] \& 0x3F) == 0} (os 6 bits inferiores de \texttt{flags} são nulos) e \texttt{buffer[1] < buffer[2]} ($L_{\text{on}} < L_{\text{off}}$); caso contrário, descarta-se 1 byte por vez até recuperar o sincronismo. Para pacotes válidos, o console exibe uma barra gráfica do nível, o valor percentual e bruto ($0$--$255$), o estado da bomba, os limiares ativos e o indicador de falha. Na \textit{thread} principal, o operador utiliza os comandos \texttt{ligar <0-255>}, \texttt{desligar <0-255>}, \texttt{ajuda} e \texttt{sair}; antes de enviar o quadro via \texttt{struct.pack("BBBB", ...)}, o console valida localmente a restrição $0 \le L_{\text{on}} < L_{\text{off}} \le 255$.
+
+\section{Análise dos Resultados}
+A verificação do sistema baseou-se na compilação rigorosa e medição de memória do binário gerado, no cálculo analítico dos tempos de execução dos periféricos e no rastreamento das transições da lógica implementada.
+
+\subsection{Compilação e Ocupação de Memória}
+O firmware foi compilado pelo \texttt{Makefile} do projeto com as opções \texttt{-mmcu=atmega328p -Os -Wall -Wextra -std=c11}, concluindo sem erros ou alertas. A medição obtida pela ferramenta \texttt{avr-size} sobre o arquivo \texttt{controle\_nivel.elf} é apresentada na Tabela~\ref{tab:memoria}.
+
+\begin{table}[htbp]
+	\caption{Ocupação de Memória do Firmware no ATmega328P}
+	\label{tab:memoria}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{3.5pt}
+	\begin{tabularx}{\columnwidth}{@{}Xccc@{}}
+		\toprule
+		\textbf{Memória}             & \textbf{Utilizado} & \textbf{Capacidade} & \textbf{Uso (\%)} \\
+		\midrule
+		Flash (\texttt{.text+.data}) & $768\text{ B}$     & $32{.}768\text{ B}$ & $2{,}3\%$         \\
+		SRAM (\texttt{.data+.bss})   & $18\text{ B}$      & $2{.}048\text{ B}$  & $0{,}9\%$         \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+A manipulação direta dos registradores, aliada à aritmética inteira de 8 bits e ao protocolo binário sem formatação de texto, manteve o consumo em $2{,}3\%$ da memória Flash e $0{,}9\%$ da memória estática de acesso aleatório (SRAM).
+
+\subsection{Análise Temporal e Precisão}
+A partir das configurações de registradores e das especificações do ATmega328P \cite{ref_atmel}, determina-se o tempo exigido por cada etapa periódica dentro do intervalo $T_s = 1{,}000\text{ s}$:
+\begin{itemize}
+	\item \textbf{Período do Timer1:} $(15{.}624 + 1) / 15{.}625\text{ Hz} = 1{,}000\text{ s}$, sem erro de divisão em relação ao relógio principal;
+	\item \textbf{Conversão do ADC:} a $125\text{ kHz}$, cada conversão em regime permanente consome $13$ ciclos de relógio do ADC ($104\ \mu\text{s}$), sendo $25$ ciclos ($200\ \mu\text{s}$) apenas na primeira conversão após a ativação de \texttt{ADEN};
+	\item \textbf{Transmissão do pacote USART:} cada byte no formato 8N1 exige $10\text{ bits}$ ($1$ de início, $8$ de dados e $1$ de parada). A $9615{,}38\text{ bps}$, os $40\text{ bits}$ do quadro requerem aproximadamente $4{,}16\text{ ms}$.
+\end{itemize}
+
+Somando a conversão analógico-digital e a transmissão serial bloqueante pela \textit{flag} \texttt{UDRE0}, as operações periódicas ocupam cerca de $4{,}26\text{ ms}$ por ciclo, o que representa menos de $0{,}5\%$ do período de $1\text{ s}$. Como as interrupções globais permanecem habilitadas durante o laço principal, a chegada assíncrona de bytes pela \texttt{ISR(USART\_RX\_vect)} interrompe imediatamente a execução sem perda de dados.
+
+\subsection{Comportamento Lógico e Limitações Conhecidas}
+O rastreamento das condições implementadas em \texttt{main.c} e \texttt{usart.c} confirma o comportamento determinístico da máquina de controle para todas as faixas de operação, conforme sintetizado na Tabela~\ref{tab:rastreamento}. Os limiares atualizados por \texttt{flag\_pacote\_recebido} entram em vigor na iteração seguinte do laço principal e passam a ser ecoados nos bytes 1 e 2 dos pacotes de telemetria subsequentes.
+
+\begin{table*}[htbp]
+	\caption{Rastreamento das Transições de Estado Implementadas no Firmware}
+	\label{tab:rastreamento}
+	\centering
+	\footnotesize
+	\begin{tabularx}{\textwidth}{@{}cXcccc@{}}
+		\toprule
+		\textbf{\#} & \textbf{Condição Avaliada no Laço Principal}                                     & \textbf{Estado Anterior}          & \textbf{Saída \texttt{PB0}} & \textbf{\texttt{contador\_falha}} & \textbf{\texttt{flags} (Hex)} \\
+		\midrule
+		1           & $D \le L_{\text{on}}$ (nível baixo)                                              & $u = 0$                           & \texttt{1} (Ligada)         & $0$ ou $1^{\mathrm{a}}$           & \texttt{0x80}                 \\
+		2           & $L_{\text{on}} < D < L_{\text{off}}$ com $D > D_{\text{ant}}$ (subindo na banda) & $u = 1$                           & \texttt{1} (Ligada)         & $0$                               & \texttt{0x80}                 \\
+		3           & $D \ge L_{\text{off}}$ (nível alto)                                              & $u = 1$                           & \texttt{0} (Desligada)      & $0$                               & \texttt{0x00}                 \\
+		4           & $L_{\text{on}} < D < L_{\text{off}}$ (descendo na banda)                         & $u = 0$                           & \texttt{0} (Desligada)      & $0$                               & \texttt{0x00}                 \\
+		5           & $u = 1$ e $D \le D_{\text{ant}}$ por 5 ciclos consecutivos                       & $u = 1,\ c_f = 4$                 & \texttt{1} (Ligada)         & $5$                               & \texttt{0xC0}                 \\
+		6           & $u = 1$ e $D > D_{\text{ant}}$ após condição de falha                            & $u = 1,\ c_f \ge 5$               & \texttt{1} (Ligada)         & $0$                               & \texttt{0x80}                 \\
+		7           & Pacote RX válido de 4 bytes (\texttt{flag\_pacote\_recebido = 1})                & $(L_{\text{on}}, L_{\text{off}})$ & Inalterada                  & Inalterado                        & Ecoa novos limites            \\
+		\bottomrule
+		\multicolumn{6}{l}{$^{\mathrm{a}}$ Assume $1$ caso $D \le D_{\text{ant}}$ no instante do acionamento; assume $0$ caso contrário.}
+	\end{tabularx}
+\end{table*}
+
+A inspeção direta do código também evidencia duas limitações conhecidas da versão atual:
+\begin{enumerate}
+	\item \textbf{Estouro de \texttt{contador\_falha}:} declarado como \texttt{uint8\_t} sem saturação, o contador sofre \textit{overflow} após $255$ ciclos ininterruptos em falha ($255\text{ s}$), zerando temporariamente o bit 6 durante os $5\text{ s}$ seguintes; além disso, a falha é apenas sinalizada, sem desligamento automático da bomba.
+	\item \textbf{Escopo do protocolo de 4 bytes:} como o campo \texttt{amostragem} foi usado para transportar $L_{\text{off}}$, o período de amostragem permanece fixo em $1\text{ s}$ (\texttt{OCR1A = 15624}) e o acionamento manual forçado da bomba, embora reservado em comentário no bit 5 de \texttt{flags}, não está implementado no firmware.
+\end{enumerate}
 
 \section{Conclusão}
+Este trabalho apresentou o desenvolvimento de um sistema embarcado para monitoramento e controle de nível de água no microcontrolador ATmega328P em linguagem C pura. A arquitetura orientada a interrupções integrou o Timer1 em modo CTC, o ADC em resolução de 8 bits e a USART0 a $9600\text{ bps}$ com acesso direto aos registradores, permitindo executar o controle com histerese, a detecção de falhas por estagnação do nível e a comunicação bidirecional com o console supervisório em Python. O binário resultante ocupou apenas $768\text{ bytes}$ de Flash ($2{,}3\%$) e $18\text{ bytes}$ de SRAM ($0{,}9\%$), consumindo menos de $0{,}5\%$ do período de $1\text{ s}$ com conversão e transmissão serial, o que confirma a viabilidade e a eficiência da abordagem adotada.
 
 \appendices
 
@@ -142,14 +469,72 @@ A equipe declara que a IAG foi utilizada nas etapas descritas abaixo. O detalham
 \subsection*{Detalhamento}
 
 \usoIAG
-  {Demonstração Matemática do Algoritmo e Erros Associados}
-  {\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
-  {Demonstre matematicamente o funcionamento do algoritmo dígito por dígito em ponto fixo, considerando formatação Q16.0 na entrada e Q8.6 na saída. Prove também qual o limitante superior dos erros envolvidos}
-  {}
+{Demonstração Matemática do Algoritmo e Erros Associados}
+{\textit{Claude Sonnet} 5.5 \textit{(Anthropic)}}
+{Demonstre matematicamente o funcionamento do algoritmo dígito por dígito em ponto fixo, considerando formatação Q16.0 na entrada e Q8.6 na saída. Prove também qual o limitante superior dos erros envolvidos}
+{}
 
-\begin{thebibliography}{00}
-\bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
+\usoIAG
+{Alinhamento do relatório com a Template}
+{\textit{Gemini Neon Google}}
+{Garanta que este documento está alinhado à template fornecida e acuse caso encontre alguma discrepância.}
+{}
+
+\section{Mapa de Registradores e Protocolo Serial}
+As Tabelas~\ref{tab:protocolo} e~\ref{tab:registradores} resumem o formato do pacote binário definido em \texttt{usart.h} e os registradores configurados nos módulos do ATmega328P.
+
+
+\begin{table}[htbp]
+	\caption{Estrutura do Pacote Binário Serial (4 Bytes, 9600 bps, 8N1)}
+	\label{tab:protocolo}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{3pt}
+	\begin{tabularx}{\columnwidth}{@{}cl>{\raggedright\arraybackslash}X@{}}
+		\toprule
+		\textbf{Byte} & \textbf{Campo (\texttt{pacote\_t})} & \textbf{Descrição e Faixa}                                                                         \\
+		\midrule
+		0             & \texttt{nivel}                      & Leitura do ADC (\texttt{ADCH}), $0$--$255$ ($0$--$100\%$)                                          \\
+		1             & \texttt{ligar}                      & Limite inferior $L_{\text{on}}$ ($0$--$255$, padrão $51$)                                          \\
+		2             & \texttt{amostragem}                 & Limite superior $L_{\text{off}}$ ($0$--$255$, padrão $204$)                                        \\
+		3             & \texttt{flags}                      & \texttt{LF00 0000}: Bit 7 = Bomba (\texttt{L}), Bit 6 = Falha (\texttt{F}), Bits 5--0 = \texttt{0} \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+	\caption{Resumo dos Registradores Configurados no ATmega328P}
+	\label{tab:registradores}
+	\centering
+	\footnotesize
+	\setlength{\tabcolsep}{3pt}
+	\begin{tabularx}{\columnwidth}{@{}ll>{\raggedright\arraybackslash}X@{}}
+		\toprule
+		\textbf{Periférico} & \textbf{Registrador}     & \textbf{Configuração Aplicada}                                                       \\
+		\midrule
+		GPIO                & \texttt{DDRB / PORTB}    & \texttt{PINB0} como saída; inicia em \texttt{0} (bomba desligada)                    \\
+		Timer1              & \texttt{TCCR1A / TCCR1B} & \texttt{0x00} / \texttt{WGM12|CS12|CS10} (CTC, \textit{prescaler} 1024)              \\
+		Timer1              & \texttt{OCR1A / TIMSK1}  & \texttt{15624} ($1\text{ s}$) / \texttt{OCIE1A} (interrupção ativa)                  \\
+		ADC                 & \texttt{ADMUX}           & \texttt{REFS0|ADLAR} (ref. $AV_{\text{CC}}$, 8 bits em \texttt{ADCH}, \texttt{ADC0}) \\
+		ADC                 & \texttt{ADCSRA}          & \texttt{ADEN|ADIE|ADPS2:0} ($125\text{ kHz}$, interrupção ativa)                     \\
+		USART0              & \texttt{UBRR0 / UCSR0A}  & \texttt{103} / \texttt{U2X0 = 0} via \texttt{setbaud.h} ($9600\text{ bps}$)          \\
+		USART0              & \texttt{UCSR0B / UCSR0C} & \texttt{TXEN0|RXEN0|RXCIE0} / \texttt{UCSZ01|UCSZ00} (8N1)                           \\
+		\bottomrule
+	\end{tabularx}
+\end{table}
+
+\begin{thebibliography}{1}
+	\bibitem{ref_atmel}
+	Atmel Corporation, \textit{ATmega328P 8-bit AVR Microcontroller with 32K Bytes In-System Programmable Flash Datasheet}, Rev. 7810D-AVR-01/15, 2015.
+
+	\bibitem{monteiro_sismicro_u2}
+	``sismicro: Unidade 2,'' repositório GitHub. [Online]. Disponível em: \url{https://github.com/JoaoNasMonteiro/sismicro/tree/problema2/u2}. Acesso em: 23 nov. 2026.
+
+	\bibitem{avr_libc}
+	AVR-Libc Development Team, ``AVR Libc Reference Manual.'' [Online]. Disponível em: \url{https://avr-libc.nongnu.org/user-manual/}. Acesso em: 23 nov. 2026.
+
+	\bibitem{pyserial_docs}
+	C. Liechti, ``pySerial Documentation.'' [Online]. Disponível em: \url{https://pyserial.readthedocs.io/}. Acesso em: 23 nov. 2026.
 \end{thebibliography}
-
 
 \end{document}
