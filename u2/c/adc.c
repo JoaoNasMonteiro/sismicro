@@ -1,24 +1,3 @@
-/*
- * adc.c — Leitura do sensor analógico de nível de água
- *
- * O que esse módulo faz:
- *   - Configura o ADC (conversor analógico-digital) do ATmega328P
- *   - Quando o timer manda, o ADC lê a tensão no pino A0
- *   - Essa tensão vem do sensor de nível de água
- *   - O ADC converte essa tensão em um número de 0 a 255
- *   - Quando termina, dispara uma interrupção e guarda o valor
- *
- * Como funciona por baixo:
- *   O sensor gera uma tensão entre 0V e 5V proporcional ao nível.
- *   O ADC do ATmega tem 10 bits de resolução (0 a 1023), mas a gente
- *   usa um truque (ADLAR) pra pegar só os 8 bits mais importantes
- *   (0 a 255), que é o suficiente pro nosso sistema.
- *
- *   O ADC precisa de um clock entre 50 kHz e 200 kHz pra funcionar bem.
- *   Como o ATmega roda a 16 MHz, a gente divide por 128:
- *     16.000.000 / 128 = 125 kHz  ✓
- */
-
 #include "adc.h"
 
 #include <avr/interrupt.h>
@@ -56,10 +35,6 @@ void adc_iniciar_conversao(void) {
     ADCSRA |= (1 << ADSC);
 }
 
-/*
- * Essa função roda SOZINHA quando o ADC termina a conversão.
- * Ela lê o resultado e avisa o main que tem um valor novo.
- */
 ISR(ADC_vect) {
     /* Lê o valor convertido (0-255) */
     nivel_atual = ADCH;

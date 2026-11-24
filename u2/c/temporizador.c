@@ -1,23 +1,3 @@
-/*
- * temporizador.c — Configura o Timer1 do ATmega328P
- *
- * O que esse módulo faz:
- *   - Configura o Timer1 pra contar até um certo valor e resetar sozinho
- *   - Quando ele chega nesse valor, dispara uma interrupção
- *   - Dentro da interrupção, a gente manda o ADC começar uma leitura
- *
- * Como funciona por baixo:
- *   O ATmega roda a 16 MHz (16 milhões de ticks por segundo).
- *   Isso é rápido demais pra contar 1 segundo direto, então a gente
- *   usa um "prescaler" de 1024, que divide o clock:
- *
- *     16.000.000 / 1024 = 15.625 ticks por segundo
- *
- *   Então se a gente mandar o timer contar até 15.624 (começa do zero),
- *   ele vai levar exatamente 1 segundo pra chegar lá.
- *   Quando chega, ele reseta e recomeça — isso é o modo CTC.
- */
-
 #include "temporizador.h"
 #include "adc.h"
 
