@@ -62,7 +62,7 @@ int main(void) {
        * Flags (LF00 0000):
        *   Bit 7 (L): 1 = Bomba ligada, 0 = desligada
        *   Bit 6 (F): 1 = Falha detectada (5s sem aumento de nível)
-       *   Bit 5 (M): 1 = Modo manual ativo, 0 = automático
+       *   Bits 5 a 0: Não utilizados
        */
       uint8_t flags = 0;
       if (bomba_ligada) {

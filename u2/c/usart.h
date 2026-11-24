@@ -8,9 +8,9 @@
 
 typedef struct pacote {
   uint8_t nivel;
-  uint8_t ligar;      // fração de 255 para a qual a bomba liga
-  uint8_t amostragem; // taxa de amostragem. Modos fixos 0 - y
-  uint8_t flags;      // top 2 bits para flag, LF00 0000
+  uint8_t ligar;      // Limite inferior recebido do computador
+  uint8_t amostragem; // Campo usado pelo firmware como limite superior recebido
+  uint8_t flags;      // Bit 7: bomba ligada; bit 6: falha; bits inferiores não usados
 } pacote_t;
 
 extern volatile uint8_t flag_pacote_recebido;

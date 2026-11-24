@@ -5,13 +5,12 @@ console.py — Console serial para supervisão e controle de nível de água (AT
 Funcionalidades:
   - Monitoramento contínuo: nível (barra gráfica e %), estado da bomba e alertas de falha
   - Configuração de parâmetros: limites de ligar (inferior) e desligar (superior)
-  - Controle de operação: forçar ligar/desligar bomba e retorno ao modo automático
 
 Protocolo do Pacote (4 bytes binários):
   Byte 0: nivel             (0–255)
   Byte 1: limite_ligar      (0–255)
   Byte 2: limite_desligar   (0–255)
-  Byte 3: flags             (Bit 7 = Bomba Ligada, Bit 6 = Falha, Bit 5 = Manual)
+  Byte 3: flags             (Bit 7 = Bomba Ligada, Bit 6 = Falha)
 
 Uso:
   python3 console.py                    # Porta padrão /dev/ttyACM0
@@ -66,7 +65,7 @@ def thread_receber(ser, rodando):
                 while len(buffer) >= TAMANHO_PACOTE:
                     # Auto-sincronismo:
                     # Em um pacote válido:
-                    # 1. Os 6 bits inferiores de flags (byte 3) são sempre zero (LF00 0000 -> mask 0x3F == 0)
+                    # 1. Os 6 bits inferiores de flags (byte 3) devem ficar em zero (máscara 0x3F)
                     # 2. O limite inferior (byte 1) deve ser menor que o superior (byte 2)
                     if (buffer[3] & 0x3F) != 0 or buffer[1] >= buffer[2]:
                         # Desalinhado por ruído ou abertura de porta: avança 1 byte até sincronizar
